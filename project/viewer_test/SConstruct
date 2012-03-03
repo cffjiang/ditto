@@ -1,0 +1,83 @@
+# scons build file for viewer_test
+#
+# Written by: Chenfanfu Jiang, 2012
+#
+
+import os
+import sys
+
+include_paths = []
+compile_flags = []
+lib_paths = []
+libs = []
+linking_flags = []
+
+
+##
+## processor specific flags
+##
+
+compiler = 'g++'
+
+compile_flags.append('-march=native')
+compile_flags.append('-fprofile-arcs')
+compile_flags.append('-ftest-coverage')
+
+# process command line arguments
+build_type = ARGUMENTS.get('type','debug')
+if build_type == 'release':
+
+    build_dir = 'build/release'
+    compile_flags.append('-DNDEBUG')
+    compile_flags.append('-O3')
+
+elif build_type == 'debug':
+
+    build_dir = 'build/debug'
+    compile_flags.append('-g')
+    linking_flags.append('-g')
+
+else:
+    print 'scons type=(release|debug)'
+    sys.exit(1)
+
+openmp = ARGUMENTS.get('openmp','true')
+if openmp == 'true':
+    compile_flags.append('-fopenmp')
+    libs.append('gomp')
+
+
+
+include_paths.append('/usr/include');
+include_paths.append('/usr/local/glew/include');
+
+lib_paths.append('/usr/local/lib')
+lib_paths.append('/usr/local/glew/lib')
+
+
+compile_flags.append('-Wno-deprecated')
+
+#linking_flags.append('-pthread')
+
+
+libs.append('GLEW')
+libs.append('glut')
+libs.append('m')
+libs.append('gcov')
+
+env = Environment(
+CXX=compiler,
+CPPFLAGS=compile_flags,
+CPPPATH=include_paths,
+LIBPATH=lib_paths,
+LIBS=libs,
+LINKFLAGS=linking_flags
+)
+
+Export('env')
+
+env.SConscript('SConscript', build_dir=build_dir, duplicate=0)
+
+
+if os.path.exists('./viewer_test_'+build_type) == False:
+    os.system('ln -s build/'+build_type+'/viewer_test viewer_test_'+build_type)

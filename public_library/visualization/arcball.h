@@ -10,8 +10,8 @@
 #define DITTO_PUBLIC_LIBRARY_VISUALIZATION_ARCBALL_H
 
 #include <cmath>
-#include <GL\gl.h>
-#include <GL\glu.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
 
 namespace ditto{ namespace visualization {
 
