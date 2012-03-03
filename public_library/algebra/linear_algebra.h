@@ -2,7 +2,28 @@
 // ditto/public_library/algebra/linear_algebra.h
 // Copyright 2011, Joseph M. Teran
 //
-// Sparse Matrix, MINRES, and CG
+// Mainly for Sparse Matrix, MINRES, and CG
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// This file offers the following data structures / functions
+// INDEX_2D
+// INDEX_3D
+// VECTOR_2D
+// VECTOR_3D
+// VECTOR_4D
+// MATRIX_2X2
+// MATRIX_3X3
+// LIST
+// VECTOR
+// SPARSE_ROW
+// SPARSE_MATRIX
+// Function: Sparse_Multiply
+// MATRIX_MXN
+// Function: Multiply (of matricies)
+// MINRES
+// GMRES
+// PRECONDITIONED_CONJUGATE_GRADIENT
+// CONJUGATE_GRADIENT
+
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
 #ifndef DITTO_PUBLIC_LIBRARY_ALGEBRA_LINEAR_ALGEBRA_H
@@ -14,9 +35,9 @@
 #include "float.h"
 #include <math.h>
 
-namespace di{
-namespace fanfu_utilities{
-namespace ALGEBRA{
+namespace ditto{
+namespace algebra{
+
 class INDEX_2D{
 	/* This assumes that we have data at 0 <= i < n, 0 <=j< m. This then maps dofs at these coords to the integer 0 <= i*n+j < m*n
 	 */
@@ -748,12 +769,12 @@ public:
 	
 	void operator-=(VECTOR<T>& x) {assert(n==x.Size());for(int i=0;i<n;i++) values[i]=values[i]-x(i);}
 	
-	void Write_DAT_File(std::string file){
+    /*void Write_DAT_File(std::string file){
 		FILE* fpointer;
 		fpointer=fopen(file.c_str(),"w");
 		for(int i=0;i<n;i++)
 			fprintf(fpointer,"%g\n",(double)values[i]);
-		fclose(fpointer);}
+                        fclose(fpointer);}*/
 	
 	void Print(){
 		std::cout << "Vector =";
@@ -1007,7 +1028,7 @@ public:
 				Pj.Add_Entry(i,Ri.Value_At_Sparse_Index(j_hat));}}
 	}
 	
-	void Write_DAT_File(std::string file){
+    /*void Write_DAT_File(std::string file){
 		FILE* fpointer;
 		fpointer=fopen(file.c_str(),"w");
 		for(int i=0;i<m;i++){
@@ -1020,7 +1041,7 @@ public:
 				if(!found) fprintf(fpointer,"%g ",(T)0);}
 			fprintf(fpointer,"\n");}
 		fclose(fpointer);
-	}
+                }*/
 	
 	void Write_Sparse_DAT_Files(std::string file){}
 };
@@ -1479,5 +1500,5 @@ public:
 	}
 	
 };
-}}} // namespaces
+}} // namespaces
 #endif
