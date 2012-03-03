@@ -1,0 +1,7 @@
+build/
+
+.sconsign.dblite
+
+*_release
+
+*_debug
