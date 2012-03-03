@@ -105,7 +105,7 @@ void my_init()
     GLfloat diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular[] = { 1.0, 1.0, 1.0, 1.0 };
     // GLfloat position[] = { -3.0, 3.0, 3.0, 0.0 };
-    GLfloat position[] = { 0.0, 0.0, 30.0, 1.0 };
+    GLfloat position[] = { 10.0, 0.0, -30.0, 1.0 };
     GLfloat diffuse2[] = { 0.3, 0.3, 0.3, 1.0 };
     GLfloat specular2[] = { 0.3, 0.3, 0.3, 1.0 };
     GLfloat position2[] = { 0.0, 100.0, 00.0, 1.0 };
