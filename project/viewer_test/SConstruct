@@ -46,10 +46,11 @@ if openmp == 'true':
     compile_flags.append('-fopenmp')
     libs.append('gomp')
 
-
+ditto_root = os.environ.get('DITTO_ROOT')
 
 include_paths.append('/usr/include');
 include_paths.append('/usr/local/glew/include');
+include_paths.append(ditto_root);
 
 lib_paths.append('/usr/local/lib')
 lib_paths.append('/usr/local/glew/lib')
