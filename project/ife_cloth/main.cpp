@@ -1,23 +1,13 @@
-//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-// ditto/public_library/visualization/viewer.h
-// Copyright 2012, Chenfanfu Jiang
-//
-// OpenGL viewer.
-//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-
-#ifndef DITTO_PUBLIC_LIBRARY_VISUALIZATION_VIEWER_H
-#define DITTO_PUBLIC_LIBRARY_VISUALIZATION_VIEWER_H
-
+#include <string>
 #include <GL/glut.h>
 #include <cstdlib>
 #include <cmath>
 
+#include <ditto/public_library/geometry/triangle_mesh_2d.h>
+#include <ditto/public_library/solid_3d/invertible_finite_element_cloth.h>
 #include <ditto/public_library/visualization/arcball.h>
 
-namespace ditto{ namespace visualization {
-
-
-
+using namespace ditto::visualization;
 
 
 GLint uAmbient, uDiffuse, uSpecular, uLightPos, uShininess;
@@ -194,15 +184,50 @@ static void drag_scene(int x, int y)
 	arcball_move(x,invert_y);
 }
 
+
+ditto::geometry::Triangle_Mesh_2d<double> tm;
+
+ditto::solid_3d::Invertible_Finite_Element_Cloth<double, ditto::geometry::Triangle_Mesh_2d<double> > 
+        cloth("neo-hookean", "backward euler", tm, 0.001, 10, 0.3);
+
 static void draw_scene()
 {
+
+   cloth.update(1e-3, 100, 1e-8, 2000); 
+    
     glTranslatef( object_translate.x, object_translate.y, object_translate.z );
     arcball_rotate();
     
     // draw things below
     
-    set_colour( 0.0f, 0.0f, 1.0f );
-	draw_sphere();
+    set_colour( 0.0f, 1.0f, 0.0f );
+//glBegin(GL_TRIANGLES);                      // Drawing Using Triangles
+    //  glVertex3f( 0.0f, 2.0f, 0.0f);              // Top
+    // glVertex3f(-2.0f,-2.0f, 0.0f);              // Bottom Left
+    // glVertex3f( 2.0f,-2.0f, 0.0f);              // Bottom Right
+//glEnd();       
+    
+//glutSolidSphere(1.0,20,30);
+
+    for (int i=0; i<cloth.mesh.elements.size(); i++) {
+        glBegin(GL_TRIANGLES); 
+
+        glVertex3f(cloth.mesh.nodes[cloth.mesh.elements[i](0)](0) + cloth.u[2*cloth.mesh.elements[i](0)],
+            cloth.mesh.nodes[cloth.mesh.elements[i](0)](1) + cloth.u[2*cloth.mesh.elements[i](0)+1],
+            0 );
+
+        glVertex3f(cloth.mesh.nodes[cloth.mesh.elements[i](1)](0) + cloth.u[2*cloth.mesh.elements[i](1)],
+            cloth.mesh.nodes[cloth.mesh.elements[i](1)](1) + cloth.u[2*cloth.mesh.elements[i](1)+1],
+          0 );
+
+        glVertex3f(cloth.mesh.nodes[cloth.mesh.elements[i](2)](0) + cloth.u[2*cloth.mesh.elements[i](2)],
+            cloth.mesh.nodes[cloth.mesh.elements[i](2)](1) + cloth.u[2*cloth.mesh.elements[i](2)+1],
+           0 );
+        
+        glEnd();          
+    }
+
+
 }
 
 static void resize(int w, int h)
@@ -271,7 +296,7 @@ static void mouse_motion(int x, int y)
 	drag_scene(x,y);
 }
 
-int main_loop(int argc, char ** argv)
+int main(int argc, char ** argv)
 {
     arcball_reset();
 
@@ -303,6 +328,4 @@ int main_loop(int argc, char ** argv)
     return 0;
 }
 
-} }
 
-#endif

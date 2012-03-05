@@ -48,10 +48,8 @@ public:
     rho_list_type rho;
     area_list_type area;
 
-    Triangle_Mesh_2d() {
-        initialize_regular_mesh(3, 4, 0, 1, 0, 1);
-    }
-    void initialize_regular_mesh(const int m, const int n, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 50);
+    Triangle_Mesh_2d (){initialize_regular_mesh(5, 5, -0.5, 0.5, -0.5, 0.5);}
+    void initialize_regular_mesh(const int m, const int n, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1);
 };
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -98,8 +96,9 @@ void Triangle_Mesh_2d<T>::initialize_regular_mesh(const int input_Nx, const int 
         simplex_type tri(positions);
         area.push_back(tri.get_area());
     }
-
-    // debug
+    
+    // debug code
+    /*
     for (unsigned int i=0; i<nodes.size(); i++) {
         std::cout << "\nnode: " << nodes[i](0) << " " << nodes[i](1) << std::endl;
     }
@@ -109,7 +108,7 @@ void Triangle_Mesh_2d<T>::initialize_regular_mesh(const int input_Nx, const int 
         std::cout << "rho: " << rho[i] << std::endl;
         std::cout << "area: " << area[i] << std::endl;
     }
-        
+    */    
 
 }
 

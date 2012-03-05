@@ -1,6 +1,6 @@
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 // ditto/public_library/algebra/linear_algebra.h
-// Copyright 2011, Joseph M. Teran
+// Copyright 2011, Joseph M. Teran and Chenfanfu Jiang
 //
 // Mainly for Sparse Matrix, MINRES, and CG
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -803,86 +803,86 @@ public:
     SPARSE_ROW(const int n_input):n(n_input),size(0),indices(0),values(0) {}
 
     ~SPARSE_ROW() {delete[] indices;delete[] values;}
-	
-	void Permute_Columns(const VECTOR<int>& permutation){
-		assert(permutation.Size()==n);
-		for(int i=0;i<size;i++) indices[i]=permutation(indices[i]);
-	}
-	
-	void Zero_Out_Without_Changing_Sparsity(){for(int i=0;i<size;i++) values[i]=(T)0;}
-	
-	bool Is_Non_Zero(const int index){for(int i=0;i<size;i++) if(indices[i]==index) return true;return false;}
-	
-	void operator+=(SPARSE_ROW<T>& input){
+    
+    void Permute_Columns(const VECTOR<int>& permutation){
+            assert(permutation.Size()==n);
+            for(int i=0;i<size;i++) indices[i]=permutation(indices[i]);
+    }
+    
+    void Zero_Out_Without_Changing_Sparsity(){for(int i=0;i<size;i++) values[i]=(T)0;}
+    
+    bool Is_Non_Zero(const int index){for(int i=0;i<size;i++) if(indices[i]==index) return true;return false;}
+    
+    void operator+=(SPARSE_ROW<T>& input){
 		for(int i=0;i<input.Number_Nonzero();i++){
-			if(this->Value_Exists_At_Entry(input.Index(i)))
-			   (*this)(input.Index(i))+=input.Value_At_Sparse_Index(i);
-			else
-				this->Add_Entry(input.Index(i),input.Value_At_Sparse_Index(i));}
-	}
-
+                    if(this->Value_Exists_At_Entry(input.Index(i)))
+                        (*this)(input.Index(i))+=input.Value_At_Sparse_Index(i);
+                    else
+                        this->Add_Entry(input.Index(i),input.Value_At_Sparse_Index(i));}
+    }
+    
     T& operator()(const int i){
         assert(0<=i && i<=n-1);
         for(int j=0;j<=size-1;j++) if(indices[j]==i) return values[j];
-		assert(false);
-		return values[0];}
+        assert(false);
+        return values[0];}
+    
+    T Row_Sum(){
+        T sum=(T)0;
+        for(int i=0;i<=size-1;i++) sum+=values[i];
+        return sum;}
+    
+    void Normalize_Row_Sum(){
+        T sum=(T)0;
+        for(int i=0;i<=size-1;i++) sum+=values[i];
+        assert(sum!=0);
+        for(int i=0;i<=size-1;i++) values[i]=values[i]/sum;
+    }
 	
-	T Row_Sum(){
-		T sum=(T)0;
-		for(int i=0;i<=size-1;i++) sum+=values[i];
-		return sum;}
-	
-	void Normalize_Row_Sum(){
-		T sum=(T)0;
-		for(int i=0;i<=size-1;i++) sum+=values[i];
-		assert(sum!=0);
-		for(int i=0;i<=size-1;i++) values[i]=values[i]/sum;
-	}
-	
-	void Scale(T scale){
-		for(int i=0;i<=size-1;i++) values[i]*=scale;}
-	
-	void Fill_Vector(VECTOR<T>& v){
-		assert(v.Size()==n);
+    void Scale(T scale){
+        for(int i=0;i<=size-1;i++) values[i]*=scale;}
+    
+    void Fill_Vector(VECTOR<T>& v){
+        assert(v.Size()==n);
 		for(int i=0;i<n;i++) v(i)=(T)0;
 		for(int i=0;i<size;i++) v(indices[i])=values[i];}
-	
-	void Print(){
-		std::cout << "Sparse Row =";
-		for(int i=0;i<n;i++){
-			bool found=false;
-			for(int j=0;j<=size-1;j++){
-				if(indices[j]==i){
-					std::cout << " " << values[j] << " , ";
-					found=true;}}
-			if(!found)
-				std::cout << " " << 0 << " , ";}
-		std::cout << "." << std::endl;}
-
-	int Number_Nonzero(){return size;}
-	
-	bool Value_Exists_At_Entry(const int index){
-		for(int i=0;i<size;i++) 
+    
+    void Print(){
+        std::cout << "Sparse Row =";
+        for(int i=0;i<n;i++){
+            bool found=false;
+            for(int j=0;j<=size-1;j++){
+                if(indices[j]==i){
+                    std::cout << " " << values[j] << " , ";
+                    found=true;}}
+            if(!found)
+                std::cout << " " << 0 << " , ";}
+        std::cout << "." << std::endl;}
+    
+    int Number_Nonzero(){return size;}
+    
+    bool Value_Exists_At_Entry(const int index){
+        for(int i=0;i<size;i++) 
 			if(indices[i]==index) return true;
-		return false;
-	}
-	
-	int Index(const int i_hat){assert(i_hat<size);return indices[i_hat];}
-	
-	T Value_At_Sparse_Index(const int i_hat) const{assert(i_hat<size);return values[i_hat];}
-	T& Value_At_Sparse_Index(const int i_hat){assert(i_hat<size);return values[i_hat];}
-	
+        return false;
+    }
+    
+    int Index(const int i_hat){assert(i_hat<size);return indices[i_hat];}
+    
+    T Value_At_Sparse_Index(const int i_hat) const{assert(i_hat<size);return values[i_hat];}
+    T& Value_At_Sparse_Index(const int i_hat){assert(i_hat<size);return values[i_hat];}
+    
     T Dot_Product(VECTOR<T>& v){
-		assert(v.Size()==n);
+        assert(v.Size()==n);
         T result=0;for(int i=0;i<=size-1;i++) result+=values[i]*v(indices[i]);
         return result;}
-
+    
     void Add_Entry(const int index,const T value){
-		bool found=false;int entry=0;
-		for(int i=0;i<size;i++) if(indices[i]==index){found=true;entry=i;}
-		if(found){
-			values[entry]=value;
-			return;}
+        bool found=false;int entry=0;
+        for(int i=0;i<size;i++) if(indices[i]==index){found=true;entry=i;}
+        if(found){
+            values[entry]=value;
+            return;}
         size++;int* new_indices=new int[size];T* new_values=new T[size];
         for(int i=0;i<=size-2;i++){
             new_indices[i]=indices[i];new_values[i]=values[i];}
@@ -900,133 +900,153 @@ public:
         for(int i=0;i<=m-1;i++) rows[i]=new SPARSE_ROW<T>(n);}
 
     ~SPARSE_MATRIX() {for(int i=0;i<=m-1;i++) delete rows[i];delete[] rows;}
-
+    
     void Zero_Out_Without_Changing_Sparsity(){
-		for(int i=0;i<m;i++) rows[i]->Zero_Out_Without_Changing_Sparsity();}
-	
-	T& operator()(const int i,const int j){
-        assert(0<=i && i<=m-1);return (*rows[i])(j);}
-	
-	void Column(const int j,VECTOR<T>& c){
-		assert(j>=0 && j<n && c.Size()==m);
+        for(int i=0;i<m;i++) rows[i]->Zero_Out_Without_Changing_Sparsity();}
+    
+    T& operator()(const int i,const int j){
+            assert(0<=i && i<=m-1);return (*rows[i])(j);}
+    
+    void Column(const int j,VECTOR<T>& c){
+            assert(j>=0 && j<n && c.Size()==m);
 		for(int i=0;i<m;i++){
-			SPARSE_ROW<T>& Ai=Row(i);
+                    SPARSE_ROW<T>& Ai=Row(i);
 			if(Ai.Is_Non_Zero(j)) c(i)=Ai(j);
 			else c(i)=(T)0;}}
-	
-	T Column_Sum(const int j){
-		assert(j>=0 && j<n);
+    
+    T Column_Sum(const int j){
+            assert(j>=0 && j<n);
 		T sum=(T)0;
 		for(int i=0;i<m;i++){
-			SPARSE_ROW<T>& Ai=Row(i);
+                    SPARSE_ROW<T>& Ai=Row(i);
 			if(Ai.Is_Non_Zero(j)) sum+=Ai(j);}
 		return sum;
+    }
+    
+    void Normalize_Row_Sums(){
+        for(int i=0;i<m;i++) Row(i).Normalize_Row_Sum();
+    }
+    
+    void Right_Multiply(SPARSE_MATRIX<T>& B,SPARSE_MATRIX<T>&AB){
+        assert(n==B.M());
+        VECTOR<T> column(B.M());
+        for(int i=0;i<AB.M();i++){
+            for(int j=0;j<B.N();j++){
+                B.Column(j,column);
+                SPARSE_ROW<T>& Ai=Row(i);
+                SPARSE_ROW<T>& ABi=AB.Row(i);
+                ABi(j)=Ai.Dot_Product(column);}}} 
+    
+    void Scale_Rows(T scale){
+        for(int i=0;i<=m-1;i++) rows[i]->Scale(scale);}
+    
+    void Scale_Rows(const VECTOR<T>& diagonal_row_scaling){
+        for(int i=0;i<=m-1;i++) rows[i]->Scale(diagonal_row_scaling(i));}
+	
+    void Scale_Columns(const VECTOR<T>& diagonal_column_scaling){
+        for(int i=0;i<=m-1;i++){
+            SPARSE_ROW<T>& row=*(rows[i]);
+            for(int j_index=0;j_index<row.Number_Nonzero();j_index++){
+                int j=row.Index(j_index);
+                row.Value_At_Sparse_Index(j_index)*=diagonal_column_scaling(j);}}
 	}
-	
-	void Normalize_Row_Sums(){
-		for(int i=0;i<m;i++) Row(i).Normalize_Row_Sum();
-	}
-	
-	void Right_Multiply(SPARSE_MATRIX<T>& B,SPARSE_MATRIX<T>&AB){
-		assert(n==B.M());
-		VECTOR<T> column(B.M());
-		for(int i=0;i<AB.M();i++){
-			for(int j=0;j<B.N();j++){
-				B.Column(j,column);
-				SPARSE_ROW<T>& Ai=Row(i);
-				SPARSE_ROW<T>& ABi=AB.Row(i);
-				ABi(j)=Ai.Dot_Product(column);}}} 
-	
-	void Scale_Rows(T scale){
-		for(int i=0;i<=m-1;i++) rows[i]->Scale(scale);}
-	
-	void Scale_Rows(const VECTOR<T>& diagonal_row_scaling){
-		for(int i=0;i<=m-1;i++) rows[i]->Scale(diagonal_row_scaling(i));}
-	
-	void Scale_Columns(const VECTOR<T>& diagonal_column_scaling){
-		for(int i=0;i<=m-1;i++){
-			SPARSE_ROW<T>& row=*(rows[i]);
-			for(int j_index=0;j_index<row.Number_Nonzero();j_index++){
-				int j=row.Index(j_index);
-				row.Value_At_Sparse_Index(j_index)*=diagonal_column_scaling(j);}}
-	}
-	
-	void Print_Sparsity_Information(){
-		std::cout << "Sparse Matrix: " << std::endl;
-		for(int i=0;i<m;i++){
-			std::cout << "Number non-zero in row " << i << " = " << Row(i).Number_Nonzero()<<std::endl;
-		}
-	}
-	
-	void Print(){
-		std::cout << "Sparse Matrix = " << std::endl;
-		for(int i=0;i<m;i++)
-			Row(i).Print();}
-
+    
+    void Print_Sparsity_Information(){
+        std::cout << "Sparse Matrix: " << std::endl;
+        for(int i=0;i<m;i++){
+            std::cout << "Number non-zero in row " << i << " = " << Row(i).Number_Nonzero()<<std::endl;
+        }
+    }
+    
+    void Print(){
+        std::cout << "Sparse Matrix = " << std::endl;
+        for(int i=0;i<m;i++)
+            Row(i).Print();}
+    
     SPARSE_ROW<T>& Row(const int i){
         assert(0<=i && i<=m-1);return *rows[i];}
-	
-	void Residual(VECTOR<T>& rhs,VECTOR<T>& x,VECTOR<T>& r)
+
+    void Zero_Out_Row(const int rowIndex) {
+        Row(rowIndex).Zero_Out_Without_Changing_Sparsity();}
+    
+    void Zero_Out_Column(const int colIndex){
+        for(int i=0;i<m;i++){
+            if(Row(i).Value_Exists_At_Entry(colIndex)){
+                Row(i)(colIndex) = (T)0;}}}
+    
+    void Set_Entry_Value(const int i, const int j, T value){
+            if(Row(i).Value_Exists_At_Entry(j)){
+                Row(i)(j) = value;}
+            else{
+                Row(i).Add_Entry(j,value);}}
+
+    void Add_To_Or_Create_Entry(const int i, const int j, T value){
+            if(Row(i).Value_Exists_At_Entry(j)){
+                Row(i)(j) += value;}
+            else{
+                Row(i).Add_Entry(j,value);}}
+    
+    void Residual(VECTOR<T>& rhs,VECTOR<T>& x,VECTOR<T>& r)
 	{for(int i=0;i<m;i++){
 		SPARSE_ROW<T>& Ai=Row(i);
 		r(i)=rhs(i)-Ai.Dot_Product(x);}}
-	
-	void Multiply(VECTOR<T>& x,VECTOR<T>& b){//as in b=Ax
-		assert(b.Size()==m);
-		for(int i=0;i<m;i++){
-			SPARSE_ROW<T>& Ai=Row(i);
-			b(i)=Ai.Dot_Product(x);}}
-	
-	void Multiply_With_Transpose(VECTOR<T>& x,VECTOR<T>& b){//as in b=A'x
-		assert(b.Size()==n);
+    
+    void Multiply(VECTOR<T>& x,VECTOR<T>& b){//as in b=Ax
+        assert(b.Size()==m);
+        for(int i=0;i<m;i++){
+            SPARSE_ROW<T>& Ai=Row(i);
+            b(i)=Ai.Dot_Product(x);}}
+    
+    void Multiply_With_Transpose(VECTOR<T>& x,VECTOR<T>& b){//as in b=A'x
+        assert(b.Size()==n);
+        assert(x.Size()==m);
+        b.Set_To_Zero();
+        for(int j=0;j<m;j++){
+            SPARSE_ROW<T>& row=Row(j);
+            for(int i=0;i<row.Number_Nonzero();i++){
+                int index=row.Index(i);
+                b(index)+=row.Value_At_Sparse_Index(i)*x(j);}}
+    }
+    
+    void Multiply_With_Transpose(const VECTOR<T>& x,VECTOR<T>& b){//as in b=A'x
+        assert(b.Size()==n);
 		assert(x.Size()==m);
 		b.Set_To_Zero();
 		for(int j=0;j<m;j++){
-			SPARSE_ROW<T>& row=Row(j);
-			for(int i=0;i<row.Number_Nonzero();i++){
-				int index=row.Index(i);
-				b(index)+=row.Value_At_Sparse_Index(i)*x(j);}}
-	}
+                    SPARSE_ROW<T>& row=Row(j);
+                    for(int i=0;i<row.Number_Nonzero();i++){
+                        int index=row.Index(i);
+                        b(index)+=row.Value_At_Sparse_Index(i)*x(j);}}
+    }
 	
-	void Multiply_With_Transpose(const VECTOR<T>& x,VECTOR<T>& b){//as in b=A'x
-		assert(b.Size()==n);
-		assert(x.Size()==m);
-		b.Set_To_Zero();
-		for(int j=0;j<m;j++){
-			SPARSE_ROW<T>& row=Row(j);
-			for(int i=0;i<row.Number_Nonzero();i++){
-				int index=row.Index(i);
-				b(index)+=row.Value_At_Sparse_Index(i)*x(j);}}
-	}
+    T A_Norm_Squared(const VECTOR<T>& x){
+        T result;
+        assert(x.Size()==m);
+        for(int i=0;i<m;i++){
+            SPARSE_ROW<T>& Ai=Row(i);
+            result+=Ai.Dot_Product(x)*x(i);}
+        return result;
+    }
 	
-	T A_Norm_Squared(const VECTOR<T>& x){
-		T result;
-		assert(x.Size()==m);
-		for(int i=0;i<m;i++){
-			SPARSE_ROW<T>& Ai=Row(i);
-			result+=Ai.Dot_Product(x)*x(i);}
-		return result;
-	}
-	
-	int M(){return m;}
-	
-	int N(){return n;}
-	
-	void Multiply(const VECTOR<T>& x,VECTOR<T>& b)
+    int M(){return m;}
+    
+    int N(){return n;}
+    
+    void Multiply(const VECTOR<T>& x,VECTOR<T>& b)
 	{for(int i=0;i<m;i++){
 		SPARSE_ROW<T>& ri=Row(i);
 		b(i)=ri.Dot_Product(x);}}
 	
-	void Transpose(SPARSE_MATRIX<T>& transpose)
-	{
-		assert(transpose.m==n && transpose.n==m);
-		for(int i=0;i<m;i++){
-			SPARSE_ROW<T>& Ri=Row(i);
-			for(int j_hat=0;j_hat<Ri.Number_Nonzero();j_hat++){
-				int j=Ri.Index(j_hat);
-				SPARSE_ROW<T>& Pj=transpose.Row(j);
-				Pj.Add_Entry(i,Ri.Value_At_Sparse_Index(j_hat));}}
-	}
+    void Transpose(SPARSE_MATRIX<T>& transpose)
+    {
+        assert(transpose.m==n && transpose.n==m);
+        for(int i=0;i<m;i++){
+            SPARSE_ROW<T>& Ri=Row(i);
+            for(int j_hat=0;j_hat<Ri.Number_Nonzero();j_hat++){
+                int j=Ri.Index(j_hat);
+                SPARSE_ROW<T>& Pj=transpose.Row(j);
+                Pj.Add_Entry(i,Ri.Value_At_Sparse_Index(j_hat));}}
+    }
 	
     /*void Write_DAT_File(std::string file){
 		FILE* fpointer;
@@ -1043,7 +1063,7 @@ public:
 		fclose(fpointer);
                 }*/
 	
-	void Write_Sparse_DAT_Files(std::string file){}
+    void Write_Sparse_DAT_Files(std::string file){}
 };
 	
 static void Sparse_Multiply(SPARSE_MATRIX<double>& C,SPARSE_MATRIX<double>& A,SPARSE_MATRIX<double>& B){
@@ -1108,6 +1128,14 @@ public:
 	void Set_To_Zero(){
 		for(int i=0;i<m;i++)for(int j=0;j<n;j++) (*this)(i,j)=(T)0;
 	}
+
+    void Set_To_Value(T t){
+        for(int i=0;i<m;i++)for(int j=0;j<n;j++) (*this)(i,j) = t;
+    }
+
+    void Scale_By(T t){
+        for(int i=0;i<m;i++)for(int j=0;j<n;j++) (*this)(i,j) *= t;
+    }
 	
 	T& operator()(const int i,const int j){
         assert(0<=i && i<=m-1);return (*rows[i])(j);}
