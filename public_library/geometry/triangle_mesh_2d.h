@@ -48,7 +48,9 @@ public:
     rho_list_type rho;
     area_list_type area;
 
-    Triangle_Mesh_2d (){initialize_regular_mesh(5, 5, -0.5, 0.5, -0.5, 0.5);}
+    Triangle_Mesh_2d (const int m, const int n, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1) {
+        initialize_regular_mesh(m, n, input_xmin, input_xmax, input_ymin, input_ymax, input_rho); }
+
     void initialize_regular_mesh(const int m, const int n, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1);
 };
 

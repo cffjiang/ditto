@@ -16,10 +16,6 @@
 
 namespace ditto{ namespace visualization {
 
-
-
-
-
 GLint uAmbient, uDiffuse, uSpecular, uLightPos, uShininess;
 
 static float aspect_ratio = 1.0f;

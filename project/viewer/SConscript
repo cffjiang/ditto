@@ -1,0 +1,11 @@
+# SConscript file
+#  for building project
+#
+# Written by:  Chenfanfu Jiang, 2012.
+#
+
+src_files = ['main.cpp']
+
+Import('env')
+
+env.Program('viewer', src_files)
