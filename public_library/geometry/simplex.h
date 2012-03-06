@@ -2,6 +2,9 @@
 // ditto/public_library/geometry/simplex.h
 // Copyright 2012, Chenfanfu Jiang
 //
+// Supporting shapes:
+//     Triangle_2d
+//     Triangle_3d
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
 #ifndef DITTO_PUBLIC_LIBRARY_GEOMETRY_SIMPLEX_H
@@ -35,6 +38,36 @@ public:
     }
 };
 
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Class: Triangle_3d
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T>
+class Triangle_3d {
+public:
+    T x[3][3];
+    
+    Triangle_3d(T input[]) {
+        int k = 0;
+        for (int i=0; i<3; i++) {
+            for (int j=0; j<3; j++) {
+                x[i][j] = input[k++];
+            }
+        }
+    }
+
+    T get_area() {
+        T a = X[1][0] - X[0][0];
+        T b = X[1][1] - X[0][1];
+        T c = X[1][2] - X[0][2];
+        T d = X[2][0] - X[0][0];
+        T e = X[2][1] - X[0][1];
+        T f = X[2][2] - X[0][2];
+        T ci = b*f-c*e;
+        T cj = c*d-a*f;
+        T ck = a*e-b*d;
+        return std::sqrt(ci*ci + cj*cj + ck*ck);
+    }
+};
 
 
 } } // end namespaces
