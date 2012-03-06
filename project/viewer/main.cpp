@@ -11,7 +11,6 @@
 #include <ditto/public_library/geometry/simplex.h>
 #include <ditto/public_library/algebra/linear_algebra.h>
 
-
 using namespace ditto::visualization;
 
 typedef double T;
@@ -65,6 +64,8 @@ void read_new_frame() {
     std::ifstream in(filename.c_str());
 
     if (in == NULL) return;
+
+    std::cout << "Reading Frame " << frame << std::endl;
 
     std::istringstream ss;
     std::string s;

@@ -1,12 +1,12 @@
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-// ditto/public_library/solid_3d/invertible_finite_element_cloth.h
+// ditto/public_library/solid_2d/neo_hookean_2d_fem_implicit.h
 // Copyright 2012, Chenfanfu Jiang
 //
 // Cloth in 3d is a special case because its material space is 2d.
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
-#ifndef DITTO_PUBLIC_LIBRARY_SOLID_3D_INVERTIBLE_FINITE_ELEMENT_CLOTH_H
-#define DITTO_PUBLIC_LIBRARY_SOLID_3D_INVERTIBLE_FINITE_ELEMENT_CLOTH_H
+#ifndef DITTO_PUBLIC_LIBRARY_SOLID_2D_NEO_HOOKEAN_2D_FEM_IMPLICIT_H
+#define DITTO_PUBLIC_LIBRARY_SOLID_2D_NEO_HOOKEAN_2D_FEM_IMPLICIT_H
 
 #include <cmath>
 #include <iostream>
@@ -20,27 +20,15 @@
 
 #include <ditto/public_library/algebra/linear_algebra.h>
 
-namespace ditto { namespace solid_3d {
+namespace ditto { namespace solid_2d {
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-// Class: Invertible_Finite_Element_Cloth
+// Class: Neo_Hookean_2d_Fem_Implicit
 // MeshType: ditto::geometry::Triangle_Mesh_2d
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
-class Invertible_Finite_Element_Cloth {
+class Neo_Hookean_2d_Fem_Implicit {
 public:
-    int elasticity_model;
-    //###################################################
-    // elasticity_model:
-    //                1:    neo-hookean
-    //###################################################
-
-    int time_integration_scheme;    
-    //###################################################
-    // time_integration_scheme:
-    //                1:    backward euler
-    //###################################################    
-
     MeshType &mesh;
     T dt;
     std::vector<T> u;
@@ -54,20 +42,8 @@ public:
     T mu;
     T lambda;
  
-    Invertible_Finite_Element_Cloth(const std::string &input_elasticity_model, const std::string &input_time_integration_scheme, MeshType &input_mesh, const T input_dt, const T input_E, const T input_nu)
+    Neo_Hookean_2d_Fem_Implicit(MeshType &input_mesh, const T input_dt, const T input_E, const T input_nu)
         :mesh(input_mesh) {
-        
-        if (input_elasticity_model == "neo-hookean") 
-            elasticity_model = 1;
-        else { 
-            std::cout << "ERROR: elasticity model not supported!\n";
-            exit(0);}
-        if (input_time_integration_scheme == "backward euler")
-            time_integration_scheme = 1;
-        else {
-            std::cout << "ERROR: time integration scheme not supported!\n";
-            exit(0);}
-
         dt = input_dt;
         u.resize(mesh.nodes.size() * 2, T(0.0));
         v.resize(mesh.nodes.size() * 2, T(0.0));
@@ -92,7 +68,7 @@ public:
 // MeshType: ditto::geometry::Triangle_Mesh_2d
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
-void Invertible_Finite_Element_Cloth<T, MeshType>::
+void Neo_Hookean_2d_Fem_Implicit<T, MeshType>::
 update(T newton_tol, int newton_max_iter, T minres_tol, int minres_max_iter) {
     int system_dimension = u.size();
     static int nframe = 1;
@@ -133,7 +109,7 @@ update(T newton_tol, int newton_max_iter, T minres_tol, int minres_max_iter) {
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
 template<class SparseMatrixType, class VectorType>
-void Invertible_Finite_Element_Cloth<T, MeshType>::
+void Neo_Hookean_2d_Fem_Implicit<T, MeshType>::
 build_linear_system(SparseMatrixType &dq_du, VectorType &delta_u, VectorType &minus_q, T minres_tol, int minres_max_iter) {
     for (unsigned int alpha = 0; alpha < mesh.elements.size(); alpha++) {
         ditto::algebra::MATRIX_MXN<T> dN_dX(3,2);
@@ -239,7 +215,7 @@ build_linear_system(SparseMatrixType &dq_du, VectorType &delta_u, VectorType &mi
 // Function: write_output
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
-void Invertible_Finite_Element_Cloth<T, MeshType>::
+void Neo_Hookean_2d_Fem_Implicit<T, MeshType>::
 write_output(int frame) {
     std::stringstream ss;
     ss << frame;

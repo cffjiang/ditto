@@ -8,4 +8,4 @@ src_files = ['main.cpp']
 
 Import('env')
 
-env.Program('mesh_test', src_files)
+env.Program('solid_2d', src_files)

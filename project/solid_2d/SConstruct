@@ -1,4 +1,4 @@
-# scons build file for viewer_test
+# scons build file for solid_2d
 #
 # Written by: Chenfanfu Jiang, 2012
 #
@@ -62,6 +62,7 @@ compile_flags.append('-Wno-deprecated')
 
 
 libs.append('GLEW')
+libs.append('GLU')
 libs.append('glut')
 libs.append('m')
 libs.append('gcov')
@@ -80,5 +81,5 @@ Export('env')
 env.SConscript('SConscript', build_dir=build_dir, duplicate=0)
 
 
-if os.path.exists('./viewer_test_'+build_type) == False:
-    os.system('ln -s build/'+build_type+'/viewer_test viewer_test_'+build_type)
+if os.path.exists('./solid_2d_'+build_type) == False:
+    os.system('ln -s build/'+build_type+'/solid_2d solid_2d_'+build_type)
