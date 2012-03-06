@@ -11,7 +11,6 @@
 #define DITTO_PUBLIC_LIBRARY_GEOMETRY_SIMPLEX_H
 
 #include <cmath>
-
 #include <ditto/public_library/algebra/linear_algebra.h>
 
 namespace ditto { namespace geometry {
