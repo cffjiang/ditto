@@ -288,64 +288,67 @@ template<class T>
 class VECTOR_3D{
 	T v1,v2,v3;
 public:
-	VECTOR_3D(const T input):v1(input),v2(input),v3(input){}
-	VECTOR_3D():v1((T)0),v2((T)0),v3((T)0){}
-	VECTOR_3D(T v1_input,T v2_input,T v3_input):v1(v1_input),v2(v2_input),v3(v3_input){}
-	VECTOR_3D(const VECTOR_3D<T>& v_input):v1(v_input.v1),v2(v_input.v2),v3(v_input.v3){}
-	VECTOR_3D(const INDEX_3D& indices):v1(indices.I()),v2(indices.J()),v3(indices.K()){}
-		
-	VECTOR_3D<T>& operator=(const VECTOR_3D<T>& input){v1=input.v1;v2=input.v2;v3=input.v3;return *this;}
-	VECTOR_3D<T> operator-(const VECTOR_3D<T>& input){return VECTOR_3D<T>(v1-input.v1,v2-input.v2,v3-input.v3);}
-	VECTOR_3D<T> operator+(const VECTOR_3D<T>& input){return VECTOR_3D<T>(v1+input.v1,v2+input.v2,v3+input.v3);}
-	VECTOR_3D<T> operator*(const T scale){return VECTOR_3D<T>(scale*v1,scale*v2,scale*v3);}
-		
-	VECTOR_3D<T> operator-()const{return VECTOR_3D<T>(-v1,-v2,-v3);}
-	
-	T operator()(const int component)const {
-		if(component==0) return v1;
-		if (component==1) return v2;
-		if (component==2) return v3;
-		assert(false);
-		return (T)0;
-	}
-	
-	static VECTOR_3D<T> Standard_Basis_Vector(const int i){
-		if(i==0) return VECTOR_3D<T>((T)1,0,0);
-		if(i==1) return VECTOR_3D<T>(0,(T)1,0);
-		if(i==2) return VECTOR_3D<T>(0,0,(T)1);
-		assert(false);
-		return VECTOR_3D();
-	}
-	
-	T& operator()(const int component){
-		if(component==0) return v1;
-		if (component==1) return v2;
-		if (component==2) return v3;
-		assert(false);
-		return v1;
-	}
-		
-	static T Dot_Product(const VECTOR_3D<T>& u,const VECTOR_3D<T>& v){return u.Dot(v);}
-			
-	T& x() {return v1;} 
-	T& y() {return v2;}
+    VECTOR_3D(const T input):v1(input),v2(input),v3(input){}
+    VECTOR_3D():v1((T)0),v2((T)0),v3((T)0){}
+    VECTOR_3D(T v1_input,T v2_input,T v3_input):v1(v1_input),v2(v2_input),v3(v3_input){}
+    VECTOR_3D(const VECTOR_3D<T>& v_input):v1(v_input.v1),v2(v_input.v2),v3(v_input.v3){}
+    VECTOR_3D(const INDEX_3D& indices):v1(indices.I()),v2(indices.J()),v3(indices.K()){}
+    
+    VECTOR_3D<T>& operator=(const VECTOR_3D<T>& input){v1=input.v1;v2=input.v2;v3=input.v3;return *this;}
+    VECTOR_3D<T> operator-(const VECTOR_3D<T>& input){return VECTOR_3D<T>(v1-input.v1,v2-input.v2,v3-input.v3);}
+    VECTOR_3D<T> operator+(const VECTOR_3D<T>& input){return VECTOR_3D<T>(v1+input.v1,v2+input.v2,v3+input.v3);}
+    VECTOR_3D<T> operator*(const T scale){return VECTOR_3D<T>(scale*v1,scale*v2,scale*v3);}
+    VECTOR_3D<T> operator-()const{return VECTOR_3D<T>(-v1,-v2,-v3);}
+
+    VECTOR_3D<T> Cross_Product(const VECTOR_3D<T>& rhs) { return VECTOR_3D<T>(v2*rhs.v3-v3*rhs.v2, v3*rhs.v1-v1*rhs.v3, v1*rhs.v2-v2*rhs.v1); }
+    
+    T operator()(const int component)const {
+        if(component==0) return v1;
+        if (component==1) return v2;
+        if (component==2) return v3;
+        assert(false);
+        return (T)0;
+    }
+
+    void Set_To_Zero() { v1 = T(); v2 = T(); v3 = T(); }
+    
+    static VECTOR_3D<T> Standard_Basis_Vector(const int i){
+        if(i==0) return VECTOR_3D<T>((T)1,0,0);
+        if(i==1) return VECTOR_3D<T>(0,(T)1,0);
+        if(i==2) return VECTOR_3D<T>(0,0,(T)1);
+        assert(false);
+        return VECTOR_3D();
+    }
+    
+    T& operator()(const int component){
+        if(component==0) return v1;
+        if (component==1) return v2;
+        if (component==2) return v3;
+        assert(false);
+        return v1;
+    }
+    
+    static T Dot_Product(const VECTOR_3D<T>& u,const VECTOR_3D<T>& v){return u.Dot(v);}
+    
+    T& x() {return v1;} 
+    T& y() {return v2;}
 	T& z() {return v3;}
-	const T& x() const {return v1;} 
-	const T& y() const {return v2;}
-	const T& z() const {return v3;}
-		
-	T Dot(const VECTOR_3D<T>& v)const {return v.v1*v1+v.v2*v2+v.v3*v3;}
+    const T& x() const {return v1;} 
+    const T& y() const {return v2;}
+    const T& z() const {return v3;}
+    
+    T Dot(const VECTOR_3D<T>& v)const {return v.v1*v1+v.v2*v2+v.v3*v3;}
     T Magnitude(){return sqrt(v1*v1+v2*v2+v3*v3);}
-		
-	void Normalize(){
-		T n=sqrt(v1*v1+v2*v2+v3*v3);
-		if(n!=(T)0){
-			v1=v1/n;
-			v2=v2/n;
-			v3=v3/n;}}
-	
-	void Print(){
-		std::cout<<"Vector 3D = (" << v1 << " , " << v2 << " , " << v3 << ")" << std::endl;}
+    
+    void Normalize(){
+        T n=sqrt(v1*v1+v2*v2+v3*v3);
+        if(n!=(T)0){
+            v1=v1/n;
+            v2=v2/n;
+            v3=v3/n;}}
+    
+    void Print(){
+        std::cout<<"Vector 3D = (" << v1 << " , " << v2 << " , " << v3 << ")" << std::endl;}
 	
 	
 };

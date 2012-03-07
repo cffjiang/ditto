@@ -7,3 +7,5 @@ build/
 *_debug
 
 frame*
+
+*.o
