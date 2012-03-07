@@ -99,13 +99,15 @@ void Triangle_Mesh_3d<T>::initialize_regular_mesh(const int input_Nx, const int 
 
     // average rho to nodes -> get mass
     mass.resize(nodes.size(), 0.0);
-    T total_mass = 0;
     for (unsigned int i=0; i<elements.size(); i++) {
-        total_mass += rho[i]*area[i]; }
-    for (unsigned int i=0; i<nodes.size(); i++) {
-        mass[i] = total_mass / nodes.size(); }
-    
-    
+        int node1 = elements[i](0);
+        int node2 = elements[i](1);
+        int node3 = elements[i](2);
+        mass[node1] += rho[i]*area[i] / 3.0;; 
+        mass[node2] += rho[i]*area[i] / 3.0;; 
+        mass[node3] += rho[i]*area[i] / 3.0;; 
+    }
+
     // debug code
     /*
     for (unsigned int i=0; i<nodes.size(); i++) {

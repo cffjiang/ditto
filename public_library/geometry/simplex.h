@@ -64,7 +64,7 @@ public:
         T ci = b*f-c*e;
         T cj = c*d-a*f;
         T ck = a*e-b*d;
-        return std::sqrt(ci*ci + cj*cj + ck*ck);
+        return 0.5*std::sqrt(ci*ci + cj*cj + ck*ck);
     }
 };
 

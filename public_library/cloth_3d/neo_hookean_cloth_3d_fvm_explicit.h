@@ -53,8 +53,12 @@ public:
     node_3d_list_type f;
 
     bool use_gravity;
+    bool use_ball_collision;
+    node_3d_type ball_center;
+    T ball_radius;
 
     matrix_2x2_list_type Dm_inverse_list;
+    matrix_2x2_list_type Dm_list;
     
     std::vector<int> dirichlet_nodes;
     node_3d_list_type dirichlet_displacement;
@@ -63,8 +67,9 @@ public:
     T poisson_ratio;
     T mu;
     T lambda;
+    T gamma;
  
-    Neo_Hookean_Cloth_3d_Fvm_Explicit(MeshType &input_mesh, const T input_dt, const T input_E, const T input_nu, const bool input_use_gravity)
+    Neo_Hookean_Cloth_3d_Fvm_Explicit(MeshType &input_mesh, const T input_dt, const T input_E, const T input_nu, const T input_gamma, const bool input_use_gravity)
         :mesh(input_mesh) {
         dt = input_dt;
         X_3d = mesh.nodes;
@@ -74,17 +79,23 @@ public:
         poisson_ratio = input_nu;
         mu = youngs_modulus / (2*(1+poisson_ratio));
         lambda = youngs_modulus * poisson_ratio / ( (1+poisson_ratio)*(1-2*poisson_ratio) );
+        gamma = input_gamma;
         use_gravity = input_use_gravity;
-        
-        pre_build_Dm_inverse();}
+        pre_build_Dm_inverse();
+        use_ball_collision = false;
+    }
 
     void pre_build_Dm_inverse();
 
-    void update();
+    void compute_elasticity();
+
+    void update_one_step();
 
     void add_gravity();
 
     void set_dirichlet_with_a_bounding_box(T x0, T xM, T y0, T yM, T z0, T zM, T xmove, T ymove, T zmove);
+
+    void add_ball_collision(T xb, T yb, T zb, T rb, T spring_constant);
 
     void write_output(int frame);
 };
@@ -102,50 +113,38 @@ pre_build_Dm_inverse() {
         node_3d_type X2 = X_3d[mesh.elements[e](1)];
         node_3d_type X3 = X_3d[mesh.elements[e](2)];
         node_3d_type X2mX1 = X2 - X1;
-        node_3d_type edge_cross = X2mX1.Cross_Product(X3-X1);
+        node_3d_type X3mX1 = X3 - X1;
+        node_3d_type edge_cross = X2mX1.Cross_Product(X3mX1);
         node_3d_type nvec = edge_cross*(1.0/edge_cross.Magnitude());
         node_3d_type nxX2mX1 = nvec.Cross_Product(X2mX1);
         node_3d_type wvec = X2mX1*(1.0/X2mX1.Magnitude());
         node_3d_type vvec = nxX2mX1*(1.0/nxX2mX1.Magnitude());
-
-        matrix_3x3_type R;
-        R(0,0) = wvec(0); R(0,1) = wvec(1); R(0,2) = wvec(2); 
-        R(1,0) = vvec(0); R(1,1) = vvec(1); R(1,2) = vvec(2); 
-        R(2,0) = nvec(0); R(2,1) = nvec(1); R(2,2) = nvec(2); 
-
-        node_3d_type X1_mapped_3d = R*(X1-X1);
-        node_3d_type X2_mapped_3d = R*(X2-X1);
-        node_3d_type X3_mapped_3d = R*(X3-X1);
-        
-        // debug code
-        T eps = 1e-10;
-        assert(std::abs(X1_mapped_3d(2)) < eps  && std::abs(X2_mapped_3d(2)) < eps  && std::abs(X3_mapped_3d(2)) < eps);
     
-        node_2d_type X1_mapped(X1_mapped_3d(0), X1_mapped_3d(1));
-        node_2d_type X2_mapped(X2_mapped_3d(0), X2_mapped_3d(1));
-        node_2d_type X3_mapped(X3_mapped_3d(0), X3_mapped_3d(1));
+        node_2d_type X1_mapped(0.0, 0.0);
+        node_2d_type X2_mapped(X2mX1.Dot(wvec), X2mX1.Dot(vvec));
+        node_2d_type X3_mapped(X3mX1.Dot(wvec), X3mX1.Dot(vvec));
 
         // now build Dm_inverse
-        matrix_2x2_type Dm_inverse(X2_mapped-X1_mapped, X3_mapped-X1_mapped);
-        Dm_inverse.Invert();
-
-        Dm_inverse_list.push_back(Dm_inverse);
+        matrix_2x2_type Dm(X2_mapped(0), X2_mapped(1), X3_mapped(0), X3_mapped(1));
+        Dm_list.push_back(Dm);
+        Dm.Invert();
+        Dm_inverse_list.push_back(Dm);
     }
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-// Function: update
+// Function: compute_elasticity
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
-update() {
-
-    static int nframe = 1;
-    std::cout << "---- Frame " << nframe << " -----------------------------------\n";
+compute_elasticity() {
 
     // build f
     f.clear();
     f.resize(mesh.nodes.size());
+    for (unsigned int i=0; i<f.size(); i++){
+        f[i](0) = f[i](1) = f[i](2) = 0.0;}
+
     for (int e = 0; e < mesh.elements.size(); e++) {
         // get x
         node_3d_type &x1 = x[mesh.elements[e](0)];
@@ -159,6 +158,10 @@ update() {
         Ds(2,0) = x2(2)-x1(2); Ds(2,1) = x3(2)-x1(2);
 
         // Get Dm_inverse
+        ditto::algebra::MATRIX_MXN<T> Dm(2,2);
+        for (int i=0; i<2; i++) {
+            for (int j=0; j<2; j++) {
+                Dm(i,j) = Dm_list[e](i,j); }}
         ditto::algebra::MATRIX_MXN<T> Dm_inverse(2,2);
         for (int i=0; i<2; i++) {
             for (int j=0; j<2; j++) {
@@ -177,6 +180,8 @@ update() {
             for (int j=0; j<2; j++) {
                 A.element(i,j) = F(i,j); }}
         NEWMAT::SVD(A, D, U, V);
+        // debug
+        // std::cout << A - U*D*(V.t());
 
         // Compute P
         NEWMAT::DiagonalMatrix dPhidSigma(2);
@@ -186,8 +191,8 @@ update() {
         P = U * dPhidSigma * (V.t());
 
         // Compute Force matrix
-        T my_area = mesh.area[e];
-        //T my_area = 0.5 * (Dm_inverse(0,0)* Dm_inverse(1,1) -  Dm_inverse(0,1)* Dm_inverse(1,0));
+        T my_area = 0.5 * std::abs(Dm(0,0)* Dm(1,1) -  Dm(0,1)* Dm(1,0));
+
         NEWMAT::Matrix Dminvt(2,2); Dminvt = 0.0;
         for (int i=0; i<2; i++) {
             for (int j=0; j<2; j++) {
@@ -195,16 +200,29 @@ update() {
         NEWMAT::Matrix Force(3,2); Force = 0.0;
         Force = -my_area * P * Dminvt;
         
-        // Add force contributions to nodes
+        // Compute force contributions to nodes
+        node_3d_type stress_node2(Force.element(0,0), Force.element(1,0), Force.element(2,0));
+        node_3d_type stress_node3(Force.element(0,1), Force.element(1,1), Force.element(2,1));
+        node_3d_type stress_node1 = (stress_node2 + stress_node3) * (-1.0);
+
+        f[mesh.elements[e](0)] = f[mesh.elements[e](0)] + stress_node1;
+        f[mesh.elements[e](1)] = f[mesh.elements[e](1)] + stress_node2;
+        f[mesh.elements[e](2)] = f[mesh.elements[e](2)] + stress_node3;
+    
+        // Add damping forces
+        node_3d_type v_bar = (v[mesh.elements[e](0)] + v[mesh.elements[e](1)] + v[mesh.elements[e](2)]) * (1.0/3.0);
         for (int i=0; i<3; i++) {
-            f[mesh.elements[e](1)](i) += Force.element(i,0); 
-            f[mesh.elements[e](2)](i) += Force.element(i,1); }
-        f[mesh.elements[e](0)] = f[mesh.elements[e](0)] + (f[mesh.elements[e](1)] +  f[mesh.elements[e](2)]) * (-1.0);
+            f[mesh.elements[e](i)] =  f[mesh.elements[e](i)] + ( -gamma*youngs_modulus * (v[mesh.elements[e](i)] - v_bar) ); }
     }
 
-    // add gravity
-    if (use_gravity) add_gravity();
+}
 
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: update_one_step
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+update_one_step() {
     // forward euler
     for (unsigned int i=0; i<mesh.nodes.size(); i++) {
         v[i] = v[i] + dt * f[i] * (1.0/mesh.mass[i]);
@@ -216,8 +234,27 @@ update() {
         v[dirichlet_nodes[i]].Set_To_Zero();
         x[dirichlet_nodes[i]] = X_3d[dirichlet_nodes[i]] + dirichlet_displacement[i];
     }
-
-    nframe++;
+}
+    
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: add_ball_collision
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+add_ball_collision(T xb, T yb, T zb, T rb, T spring_constant) {
+    if (!use_ball_collision) {
+        use_ball_collision = true; }
+    ball_radius = rb;
+    ball_center(0) = xb;
+    ball_center(1) = yb;
+    ball_center(2) = zb;
+    for (unsigned int i=0; i<mesh.nodes.size(); i++) {
+        node_3d_type my_position(x[i](0), x[i](1), x[i](2));
+        node_3d_type center2position = my_position - ball_center;
+        T dist = center2position.Magnitude();
+        if (dist < rb) {
+            node_3d_type push_normal = center2position * (1.0/dist);
+            f[i] = f[i] + push_normal*(rb - dist)*spring_constant; } }
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -226,13 +263,13 @@ update() {
 template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
 add_gravity() {
-    node_3d_type g(0.0, 0.0, -9.8);
+    node_3d_type g(0.0, -9.8, 0.0);
     for (unsigned int i=0; i<mesh.nodes.size(); i++) {
         f[i] = f[i] + mesh.mass[i] * g; }
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-// Function: write_output
+// Function: set_dirichlet_with_a_bounding_box
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
@@ -263,6 +300,12 @@ write_output(int frame) {
        fprintf(file," %d\n", mesh.elements.size());
        for (size_t i=0; i < mesh.elements.size(); i++) {
            fprintf(file,"%d %d %d\n", mesh.elements[i](0), mesh.elements[i](1), mesh.elements[i](2)); }
+
+       if (use_ball_collision) {
+            fprintf(file,"BALL");
+            fprintf(file," %f %f %f %f\n", ball_center(0), ball_center(1), ball_center(2), ball_radius*0.98);
+       }
+
        fclose(file);
 }
 

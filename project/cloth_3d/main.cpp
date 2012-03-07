@@ -10,25 +10,27 @@ int main(int argc, char ** argv)
 {
     typedef double T;
 
-    T dt = 0.0001;
+    T dt = 1.0/1000.0;
     T E = 1000;
-    T rho = 1;
+    T rho = 10;
     bool use_gravity = true;
+
+    T ballv = 1;
     
-    ditto::geometry::Triangle_Mesh_3d<T> tm(12,12, -0.5,0.5, -0.5, 0.5, rho);
-    ditto::cloth_3d::Neo_Hookean_Cloth_3d_Fvm_Explicit<T, ditto::geometry::Triangle_Mesh_3d<T> > cloth(tm, dt, E, 0.3, use_gravity);
+    ditto::geometry::Triangle_Mesh_3d<T> tm(21,21, -0.5,0.5, -0.5, 0.5, rho);
+    ditto::cloth_3d::Neo_Hookean_Cloth_3d_Fvm_Explicit<T, ditto::geometry::Triangle_Mesh_3d<T> > cloth(tm, dt, E, 0.3, 0.001, use_gravity);
 
-    cloth.set_dirichlet_with_a_bounding_box(0.48,0.62, 0.48, 0.62, -100, 100, 0.0, 0.0, 0.0);
-    cloth.set_dirichlet_with_a_bounding_box(0.45,0.65,  -0.62,-0.48,  -100, 100, 0.0, 0.0, 0.0);
-    cloth.set_dirichlet_with_a_bounding_box(-0.65, -0.45, 0.48, 0.62, -100, 100, 0.0, 0.0, 0.0);
-    cloth.set_dirichlet_with_a_bounding_box(-0.65,-0.45, -0.62,-0.45, -100, 100, 0.0, 0.0, 0.0);
-
-        
+    cloth.set_dirichlet_with_a_bounding_box(-100,100, 0.4, 0.6, -100, 100, 0.0, 0.0, 0.0);
     cloth.write_output(1);
-    int frame = 1;
+    int frame = 2;
     while (1) {
-        cloth.update();
-        cloth.write_output(++frame); 
+        std::cout << "--- Frame " << frame <<"  -------------------------------------" << std::endl;
+        std::cout << "  simulating time: " << (frame-1)*dt <<  "\n\n";
+        cloth.compute_elasticity();
+        cloth.add_gravity();
+        cloth.add_ball_collision(0, 0.0, 0.5-(frame-1)*dt*ballv, 0.3, 1e3);
+        cloth.update_one_step();
+        cloth.write_output(frame++); 
     }
 
     return 0;

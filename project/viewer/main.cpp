@@ -18,14 +18,25 @@ std::string prefix;
 int frame = 1;
 bool auto_update = false;
 
+typedef ditto::algebra::VECTOR_3D<T> node_type;
+typedef std::vector<node_type> node_list_type;
+typedef ditto::algebra::VECTOR_3D<int> element_type;
+typedef std::vector<element_type> element_list_type;
+
 struct Mesh {
-    typedef ditto::algebra::VECTOR_3D<T> node_type;
-    typedef typename std::vector<node_type> node_list_type;
-    typedef ditto::algebra::VECTOR_3D<int> element_type;
-    typedef typename std::vector<element_type> element_list_type;
     node_list_type nodes;
     element_list_type elements;
+    node_list_type vertex_normals;
 } mesh;
+
+struct Ball {
+    T x;
+    T y;
+    T z;
+    T r;
+};
+
+std::vector<Ball> ball_list;
 
 GLint uAmbient, uDiffuse, uSpecular, uLightPos, uShininess;
 static float aspect_ratio = 1.0f;
@@ -109,7 +120,40 @@ void read_new_frame() {
             reading_nodes = false;            
             reading_faces = true;            
         }    
+
+        else if (s.substr(0,4) == "BALL") {
+            ball_list.clear();
+            std::string tmp1;
+            Ball ball;
+            ss >> tmp1 >> ball.x >> ball.y >> ball.z >> ball.r;
+            ball_list.push_back(ball);
+         }   
     }
+
+    // compute normals
+    mesh.vertex_normals.clear();
+    mesh.vertex_normals.resize(mesh.nodes.size());
+    for (unsigned int i=0; i<mesh.elements.size(); i++) {
+        int node1 = mesh.elements[i](0);
+        int node2 = mesh.elements[i](1);
+        int node3 = mesh.elements[i](2);
+
+        node_type edge1 = mesh.nodes[node2] - mesh.nodes[node1];
+        node_type edge2 = mesh.nodes[node3] - mesh.nodes[node1];
+        node_type pre_normal = edge1.Cross_Product(edge2);
+        node_type normal = pre_normal  * (1.0 / pre_normal.Magnitude());
+
+        mesh.vertex_normals[node1] =  mesh.vertex_normals[node1] + normal;
+        mesh.vertex_normals[node2] =  mesh.vertex_normals[node2] + normal;
+        mesh.vertex_normals[node3] =  mesh.vertex_normals[node3] + normal;
+    }
+
+     for (unsigned int i=0; i<mesh.vertex_normals.size(); i++) {
+         T mag = mesh.vertex_normals[i].Magnitude();
+         mesh.vertex_normals[i] =  mesh.vertex_normals[i] * (1.0/mag);
+     }
+
+
 }
 
 static void reset_view(int w, int h){
@@ -137,27 +181,34 @@ void set_colour(float r, float g, float b){
     mat[1] = ambient*g;
     mat[2] = ambient*b;
     mat[3] = 1.0;
-    glMaterialfv (GL_FRONT, GL_AMBIENT, mat);
+    glMaterialfv (GL_FRONT_AND_BACK, GL_AMBIENT, mat);
     mat[0] = diffuse*r;
     mat[1] = diffuse*g;
     mat[2] = diffuse*b;
     mat[3] = 1.0;
-    glMaterialfv (GL_FRONT, GL_DIFFUSE, mat);
+    glMaterialfv (GL_FRONT_AND_BACK, GL_DIFFUSE, mat);
     mat[0] = specular*r;
     mat[1] = specular*g;
     mat[2] = specular*b;
     mat[3] = 1.0;
-    glMaterialfv (GL_FRONT, GL_SPECULAR, mat);
-    glMaterialf (GL_FRONT, GL_SHININESS, 1.0);}
+    glMaterialfv (GL_FRONT_AND_BACK, GL_SPECULAR, mat);
+    glMaterialf (GL_FRONT_AND_BACK, GL_SHININESS, 1.0);}
 
 void my_init(){
-    GLfloat ambient[] = { 0.8, 0.8, 0.8, 1.0 };
+    GLfloat ambient[] = { 0.1, 0.1, 0.1, 1.0 };
+
     GLfloat diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat position[] = { 10.0, 0.0, -30.0, 1.0 };
+
     GLfloat diffuse2[] = { 0.3, 0.3, 0.3, 1.0 };
     GLfloat specular2[] = { 0.3, 0.3, 0.3, 1.0 };
     GLfloat position2[] = { 0.0, 100.0, 00.0, 1.0 };
+
+    GLfloat diffuse3[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat specular3[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat position3[] = { 10.0, 0.0, 30.0, 1.0 };
+
     GLfloat lmodel_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
     GLfloat local_view[] = { 0.0 };
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
@@ -173,9 +224,17 @@ void my_init(){
     glLightfv(GL_LIGHT1, GL_SPECULAR, specular2);
     glLightfv(GL_LIGHT1, GL_POSITION, position2);
     glLightf(GL_LIGHT1, GL_SHININESS, 500) ;
+
+    glLightfv(GL_LIGHT2, GL_AMBIENT, ambient);
+    glLightfv(GL_LIGHT2, GL_DIFFUSE, diffuse3);
+    glLightfv(GL_LIGHT2, GL_SPECULAR, specular3);
+    glLightf(GL_LIGHT2, GL_SHININESS, 100) ;
+    glLightfv(GL_LIGHT2, GL_POSITION, position3);
+
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHT1);
+    glEnable(GL_LIGHT2);
     glEnable(GL_AUTO_NORMAL);
     glEnable(GL_NORMALIZE);
     glEnable(GL_DEPTH_TEST);
@@ -225,15 +284,33 @@ static void draw_scene(){
 
     // draw things below
     set_colour( 0.0f, 1.0f, 0.0f );
-    
+
+    // draw mesh
+
     for (int i=0; i<mesh.elements.size(); i++) {
-         glBegin(GL_TRIANGLES);
-         glVertex3f( mesh.nodes[mesh.elements[i](0)](0),  mesh.nodes[mesh.elements[i](0)](1),  mesh.nodes[mesh.elements[i](0)](2));
-         glVertex3f( mesh.nodes[mesh.elements[i](1)](0),  mesh.nodes[mesh.elements[i](1)](1),  mesh.nodes[mesh.elements[i](1)](2));
-         glVertex3f( mesh.nodes[mesh.elements[i](2)](0),  mesh.nodes[mesh.elements[i](2)](1),  mesh.nodes[mesh.elements[i](2)](2));
-         glEnd();
+        glBegin(GL_TRIANGLES);
+
+        glNormal3f( mesh.vertex_normals[mesh.elements[i](0)](0),  mesh.vertex_normals[mesh.elements[i](0)](1),  mesh.vertex_normals[mesh.elements[i](0)](2));
+        glVertex3f( mesh.nodes[mesh.elements[i](0)](0),  mesh.nodes[mesh.elements[i](0)](1),  mesh.nodes[mesh.elements[i](0)](2));
+
+        glNormal3f( mesh.vertex_normals[mesh.elements[i](1)](0),  mesh.vertex_normals[mesh.elements[i](1)](1),  mesh.vertex_normals[mesh.elements[i](1)](2));
+        glVertex3f( mesh.nodes[mesh.elements[i](1)](0),  mesh.nodes[mesh.elements[i](1)](1),  mesh.nodes[mesh.elements[i](1)](2));
+
+        glNormal3f( mesh.vertex_normals[mesh.elements[i](2)](0),  mesh.vertex_normals[mesh.elements[i](2)](1),  mesh.vertex_normals[mesh.elements[i](2)](2));
+        glVertex3f( mesh.nodes[mesh.elements[i](2)](0),  mesh.nodes[mesh.elements[i](2)](1),  mesh.nodes[mesh.elements[i](2)](2));
+
+        glEnd();
     }
 
+
+    // draw ball
+    if (ball_list.size()!=0) {
+        set_colour(1.0, 0.0, 0.0);
+        for (unsigned int i=0; i<ball_list.size(); i++) {
+            glPushMatrix();
+            glTranslatef(ball_list[i].x, ball_list[i].y, ball_list[i].z);
+            glutSolidSphere(ball_list[i].r,30,20);
+            glPopMatrix();} }
 }
 
 static void resize(int w, int h){
@@ -327,8 +404,8 @@ int main(int argc, char ** argv){
     glutMouseFunc(mouse_button);
     glutMotionFunc(mouse_motion);
     glClearColor(0.0f,0.0f,0.0f,1.0f);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    //glEnable(GL_CULL_FACE);
+    //glCullFace(GL_BACK);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glutMainLoop();
