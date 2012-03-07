@@ -1,3 +1,11 @@
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// ditto/project/cloth_3d/main.cpp
+// Copyright 2012, Chenfanfu Jiang
+//
+// Supporting discretization: 
+//         FVM with explicity Euler
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
 #include <string>
 #include <GL/glut.h>
 #include <cstdlib>
