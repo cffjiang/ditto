@@ -17,7 +17,7 @@
 int main(int argc, char ** argv)
 {
     typedef double T;
-    int test = 3;
+    int test = 2;
     T dt;
     T E;
     T rho;

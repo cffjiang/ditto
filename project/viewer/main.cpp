@@ -212,7 +212,7 @@ void my_init(){
 
     GLfloat diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat position[] = { 10.0, 0.0, -60.0, 1.0 };
+    GLfloat position[] = { 100.0, 0.0, -60.0, 1.0 };
 
     GLfloat diffuse2[] = { 0.3, 0.3, 0.3, 1.0 };
     GLfloat specular2[] = { 0.3, 0.3, 0.3, 1.0 };
@@ -220,7 +220,7 @@ void my_init(){
 
     GLfloat diffuse3[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular3[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat position3[] = { 10.0, 0.0, 60.0, 1.0 };
+    GLfloat position3[] = { 100.0, 0.0, 60.0, 1.0 };
 
     GLfloat lmodel_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
     GLfloat local_view[] = { 0.0 };
@@ -255,6 +255,10 @@ void my_init(){
     glPixelStorei(GL_PACK_ALIGNMENT,1) ;
     glPixelStorei(GL_UNPACK_ALIGNMENT,1) ;
     glShadeModel(GL_SMOOTH) ;
+
+    glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_POLYGON_SMOOTH);
 
     glPolygonMode(GL_FRONT, GL_FILL);
     glPolygonMode(GL_BACK, GL_FILL);  
@@ -295,6 +299,15 @@ static void drag_scene(int x, int y){
 static void draw_scene(){
     glTranslatef( object_translate.x, object_translate.y, object_translate.z );
     arcball_rotate();
+
+    // draw ground
+    set_colour (0.2,0.2,0.2);
+    glBegin(GL_QUADS);
+    glVertex3f(-100, -2, 100);
+    glVertex3f(100, -2, 100);
+    glVertex3f(100, -2, -100);
+    glVertex3f(-100, -2, -100);
+    glEnd();
 
     // draw mesh
     int starting_element = 0;
