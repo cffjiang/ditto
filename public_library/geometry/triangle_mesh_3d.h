@@ -37,23 +37,31 @@ public:
 
     int Nx;
     int Ny;
+    int Nz;
     T dx;
     T dy;
+    T dz;
     T xmin;
     T xmax;
     T ymin;
     T ymax;
+    T zmin;
+    T zmax;
 
     node_list_type nodes;
     element_list_type elements;
     rho_list_type rho;
     area_list_type area;
     mass_list_type mass;
+    
+    Triangle_Mesh_3d(){}
 
-    Triangle_Mesh_3d (const int m, const int n, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1) {
-        initialize_regular_mesh(m, n, input_xmin, input_xmax, input_ymin, input_ymax, input_rho); }
+    Triangle_Mesh_3d(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1) {
+        initialize_regular_mesh(input_Nx, input_Ny, input_xmin, input_xmax, input_ymin, input_ymax, input_rho); }
 
-    void initialize_regular_mesh(const int m, const int n, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1);
+    void initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1);
+
+    void initialize_parellel_clothes(const int num_clothes, const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_zmin, const T input_zmax, const T input_rho = 1);
 };
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -61,7 +69,8 @@ public:
 // Description: Initialize a regular rectangle triangle mesh in x-y plane.
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T>
-void Triangle_Mesh_3d<T>::initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho)
+void Triangle_Mesh_3d<T>::
+initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho)
 {
     std::cout << "Initializing regular rectangle triangle mesh...\n";
 
@@ -110,19 +119,83 @@ void Triangle_Mesh_3d<T>::initialize_regular_mesh(const int input_Nx, const int 
 
     // debug code
     /*
-    for (unsigned int i=0; i<nodes.size(); i++) {
-    std::cout << "\nnode: " << nodes[i](0) << " " << nodes[i](1) << " " << node[i](2) << std::endl;
-    }
+      for (unsigned int i=0; i<nodes.size(); i++) {
+      std::cout << "\nnode: " << nodes[i](0) << " " << nodes[i](1) << " " << node[i](2) << std::endl;
+      }
 
-    for (unsigned int i=0; i<elements.size(); i++) {
-        std::cout << "\nelement: " << elements[i](0) << " " << elements[i](1) << " " << elements[i](2) << std::endl;
-        std::cout << "rho: " << rho[i] << std::endl;
-        std::cout << "area: " << area[i] << std::endl;
-    }
+      for (unsigned int i=0; i<elements.size(); i++) {
+      std::cout << "\nelement: " << elements[i](0) << " " << elements[i](1) << " " << elements[i](2) << std::endl;
+      std::cout << "rho: " << rho[i] << std::endl;
+      std::cout << "area: " << area[i] << std::endl;
+      }
     */    
 
 }
 
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: initialize_parellel_clothes
+// Description: Initialize multiple regular rectangle meshes, each one is on
+//              x-y plane. 
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T>
+void Triangle_Mesh_3d<T>::
+initialize_parellel_clothes(const int num_clothes, const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_zmin, const T input_zmax, const T input_rho)
+{
+    std::cout << "Initializing multiple clothes...\n";
+
+    Nx = input_Nx;
+    Ny = input_Ny;
+    Nz = num_clothes;
+
+    xmin = input_xmin;
+    xmax = input_xmax;
+    ymin = input_ymin;
+    ymax = input_ymax;
+    zmin = input_zmin;
+    zmax = input_zmax;
+    dx = (xmax - xmin) / (Nx - 1);
+    dy = (ymax - ymin) / (Ny - 1);
+    dz  =(zmax - zmin) / (Nz - 1);
+
+    for (int cloth_index = 0; cloth_index < num_clothes; cloth_index++) {
+        // compute z coordinate
+        T z_position = zmin + dz*cloth_index;
+
+        // build nodes
+        for (int j=0; j<Ny; j++) {
+            for (int i=0; i<Nx; i++) {
+                node_type current_node(xmin + dx*i, ymin + dy*j, z_position);
+                nodes.push_back(current_node); } }
+
+        // build elements
+        for (int j=0; j<Ny-1; j++) {
+            for (int i=0; i<Nx-1; i++) {
+                element_type first_element(Nx*Ny*cloth_index + Nx*j+i, Nx*Ny*cloth_index + Nx*(j+1)+i+1, Nx*Ny*cloth_index + Nx*(j+1)+i);
+                element_type second_element(Nx*Ny*cloth_index + Nx*j+i, Nx*Ny*cloth_index + Nx*j+i+1, Nx*Ny*cloth_index + Nx*(j+1)+i+1);
+                elements.push_back(first_element);
+                elements.push_back(second_element); }}
+    }
+
+    // build rho and area
+    for (unsigned int i=0; i<elements.size(); i++) {
+        rho.push_back(input_rho);
+        T positions[9] = { nodes[elements[i](0)](0), nodes[elements[i](0)](1), nodes[elements[i](0)](2),  
+                           nodes[elements[i](1)](0), nodes[elements[i](1)](1), nodes[elements[i](1)](2), 
+                           nodes[elements[i](2)](0), nodes[elements[i](2)](1), nodes[elements[i](2)](2) };
+        simplex_type tri(positions);
+        area.push_back(tri.get_area()); }
+
+    // average rho to nodes -> get mass
+    mass.resize(nodes.size(), 0.0);
+    for (unsigned int i=0; i<elements.size(); i++) {
+        int node1 = elements[i](0);
+        int node2 = elements[i](1);
+        int node3 = elements[i](2);
+        mass[node1] += rho[i]*area[i] / 3.0;; 
+        mass[node2] += rho[i]*area[i] / 3.0;; 
+        mass[node3] += rho[i]*area[i] / 3.0;; 
+    }
+}
 
 } } // end namespaces
 

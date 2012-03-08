@@ -63,6 +63,8 @@ public:
     std::vector<int> dirichlet_nodes;
     node_3d_list_type dirichlet_displacement;
 
+    int num_of_clothes;
+
     T youngs_modulus;
     T poisson_ratio;
     T mu;
@@ -83,7 +85,10 @@ public:
         use_gravity = input_use_gravity;
         pre_build_Dm_inverse();
         use_ball_collision = false;
+        num_of_clothes = 1;
     }
+
+    void aware_of_num_of_clothes(int N);
 
     void pre_build_Dm_inverse();
 
@@ -99,6 +104,15 @@ public:
 
     void write_output(int frame);
 };
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: aware_of_num_clothes
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+aware_of_num_of_clothes(int N) {
+    num_of_clothes = N;
+}
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 // Function: pre_build_Dm_inverse
@@ -305,6 +319,9 @@ write_output(int frame) {
             fprintf(file,"BALL");
             fprintf(file," %f %f %f %f\n", ball_center(0), ball_center(1), ball_center(2), ball_radius*0.98);
        }
+
+       fprintf(file,"NUM_IDENTICAL_COMPONENTS");
+       fprintf(file," %d\n", num_of_clothes);
 
        fclose(file);
 }

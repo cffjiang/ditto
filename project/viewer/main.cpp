@@ -27,6 +27,7 @@ struct Mesh {
     node_list_type nodes;
     element_list_type elements;
     node_list_type vertex_normals;
+    int num_identical_components;
 } mesh;
 
 struct Ball {
@@ -34,6 +35,14 @@ struct Ball {
     T y;
     T z;
     T r;
+};
+
+float colour_set[][3] = {
+    {0.0, 1.0, 0.0},
+    {0.0, 0.0, 1.0},
+    {0.0, 1.0, 1.0},
+    {191/255.0,	62/255.0, 255/255.0},
+    {255/255.0, 153/255.0, 18/255.0}
 };
 
 std::vector<Ball> ball_list;
@@ -127,7 +136,11 @@ void read_new_frame() {
             Ball ball;
             ss >> tmp1 >> ball.x >> ball.y >> ball.z >> ball.r;
             ball_list.push_back(ball);
-         }   
+        }   
+        else if (s.substr(0,24) == "NUM_IDENTICAL_COMPONENTS") {
+            std::string tmp1;
+            ss >> tmp1 >> mesh.num_identical_components;
+        } 
     }
 
     // compute normals
@@ -199,7 +212,7 @@ void my_init(){
 
     GLfloat diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat position[] = { 10.0, 0.0, -30.0, 1.0 };
+    GLfloat position[] = { 10.0, 0.0, -60.0, 1.0 };
 
     GLfloat diffuse2[] = { 0.3, 0.3, 0.3, 1.0 };
     GLfloat specular2[] = { 0.3, 0.3, 0.3, 1.0 };
@@ -207,7 +220,7 @@ void my_init(){
 
     GLfloat diffuse3[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular3[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat position3[] = { 10.0, 0.0, 30.0, 1.0 };
+    GLfloat position3[] = { 10.0, 0.0, 60.0, 1.0 };
 
     GLfloat lmodel_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
     GLfloat local_view[] = { 0.0 };
@@ -278,30 +291,34 @@ static void drag_scene(int x, int y){
     int invert_y = (height - y) - 1;
     arcball_move(x,invert_y);}
 
+
 static void draw_scene(){
     glTranslatef( object_translate.x, object_translate.y, object_translate.z );
     arcball_rotate();
 
-    // draw things below
-    set_colour( 0.0f, 1.0f, 0.0f );
-
     // draw mesh
+    int starting_element = 0;
+    int num_elements_per_component = mesh.elements.size() / mesh.num_identical_components;
 
-    for (int i=0; i<mesh.elements.size(); i++) {
-        glBegin(GL_TRIANGLES);
+    for (int component = 0; component < mesh.num_identical_components; component++) {
+        int next_time_starting_element = starting_element + num_elements_per_component; 
+        set_colour( colour_set[component][0], colour_set[component][1], colour_set[component][2] );
+        for (int i=starting_element; i<next_time_starting_element; i++) {
+            glBegin(GL_TRIANGLES);
 
-        glNormal3f( mesh.vertex_normals[mesh.elements[i](0)](0),  mesh.vertex_normals[mesh.elements[i](0)](1),  mesh.vertex_normals[mesh.elements[i](0)](2));
-        glVertex3f( mesh.nodes[mesh.elements[i](0)](0),  mesh.nodes[mesh.elements[i](0)](1),  mesh.nodes[mesh.elements[i](0)](2));
+            glNormal3f( mesh.vertex_normals[mesh.elements[i](0)](0),  mesh.vertex_normals[mesh.elements[i](0)](1),  mesh.vertex_normals[mesh.elements[i](0)](2));
+            glVertex3f( mesh.nodes[mesh.elements[i](0)](0),  mesh.nodes[mesh.elements[i](0)](1),  mesh.nodes[mesh.elements[i](0)](2));
 
-        glNormal3f( mesh.vertex_normals[mesh.elements[i](1)](0),  mesh.vertex_normals[mesh.elements[i](1)](1),  mesh.vertex_normals[mesh.elements[i](1)](2));
-        glVertex3f( mesh.nodes[mesh.elements[i](1)](0),  mesh.nodes[mesh.elements[i](1)](1),  mesh.nodes[mesh.elements[i](1)](2));
+            glNormal3f( mesh.vertex_normals[mesh.elements[i](1)](0),  mesh.vertex_normals[mesh.elements[i](1)](1),  mesh.vertex_normals[mesh.elements[i](1)](2));
+            glVertex3f( mesh.nodes[mesh.elements[i](1)](0),  mesh.nodes[mesh.elements[i](1)](1),  mesh.nodes[mesh.elements[i](1)](2));
 
-        glNormal3f( mesh.vertex_normals[mesh.elements[i](2)](0),  mesh.vertex_normals[mesh.elements[i](2)](1),  mesh.vertex_normals[mesh.elements[i](2)](2));
-        glVertex3f( mesh.nodes[mesh.elements[i](2)](0),  mesh.nodes[mesh.elements[i](2)](1),  mesh.nodes[mesh.elements[i](2)](2));
+            glNormal3f( mesh.vertex_normals[mesh.elements[i](2)](0),  mesh.vertex_normals[mesh.elements[i](2)](1),  mesh.vertex_normals[mesh.elements[i](2)](2));
+            glVertex3f( mesh.nodes[mesh.elements[i](2)](0),  mesh.nodes[mesh.elements[i](2)](1),  mesh.nodes[mesh.elements[i](2)](2));
 
-        glEnd();
+            glEnd();
+        }
+        starting_element = next_time_starting_element;
     }
-
 
     // draw ball
     if (ball_list.size()!=0) {
