@@ -55,6 +55,7 @@ public:
 
     bool use_gravity;
     bool use_ball_collision;
+    bool use_ground_collision;
     node_3d_type ball_center;
     T ball_radius;
 
@@ -86,6 +87,7 @@ public:
         use_gravity = input_use_gravity;
         pre_build_Dm_inverse();
         use_ball_collision = false;
+        use_ground_collision = false;
         num_of_clothes = 1;
     }
 
@@ -102,6 +104,8 @@ public:
     void set_dirichlet_with_a_bounding_box(T x0, T xM, T y0, T yM, T z0, T zM, T xmove, T ymove, T zmove);
 
     void add_ball_collision(T xb, T yb, T zb, T rb, T spring_constant);
+
+    void add_ground_collision(T ground_level, T spring_constant);
 
     void write_output(int frame);
 
@@ -272,6 +276,23 @@ add_ball_collision(T xb, T yb, T zb, T rb, T spring_constant) {
         if (dist < rb) {
             node_3d_type push_normal = center2position * (1.0/dist);
             f[i] = f[i] + push_normal*(rb - dist)*spring_constant; } }
+}
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: add_ground_collision
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+add_ground_collision(T ground_level, T spring_constant)
+{
+    if (!use_ground_collision) {
+        use_ground_collision = true; }
+     for (unsigned int i=0; i<mesh.nodes.size(); i++) {
+         T my_y = x[i](1);
+         if (my_y < ground_level) {
+             T penetration_depth = ground_level - my_y;
+             node_3d_type push_normal(0, 1, 0);
+             f[i] = f[i] + push_normal*penetration_depth*spring_constant; } }
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
