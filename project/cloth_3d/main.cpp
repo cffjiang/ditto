@@ -25,14 +25,13 @@ int main(int argc, char ** argv)
     T ballv;
     T ball_spring_constant;
     int frame;
-    
    
     if (test == 1) { // ball pass several hang clothes
         dt = 1.0/1000.0;
         E = 1000;
         rho = 10;
         use_gravity = true;
-        ballv = 1;
+        ballv = 5;
         ball_spring_constant = 1e3;
         int num_of_clothes = 5;
         ditto::geometry::Triangle_Mesh_3d<T> tm;
@@ -47,13 +46,14 @@ int main(int argc, char ** argv)
             cloth.compute_elasticity();
             cloth.add_gravity();
             cloth.add_ball_collision(0, 0, 0.7-(frame-1)*dt*ballv, 0.3, ball_spring_constant);
+            // cloth.add_ground_collision(-0.6, 1e4);
             cloth.update_one_step();
 
             cloth.write_output(frame++);
             // cloth.write_vtk(frame++); 
         } 
     }
-
+  
     return 0;
 }
 
