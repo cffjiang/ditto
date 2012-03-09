@@ -16,6 +16,7 @@ using namespace ditto::visualization;
 typedef double T;
 std::string prefix;
 int frame = 1;
+int dframe = 1;
 bool auto_update = false;
 
 typedef ditto::algebra::VECTOR_3D<T> node_type;
@@ -75,6 +76,7 @@ static void key(unsigned char key, int x, int y);
 static void idle();
 static void mouse_button(int button, int state, int x, int y);
 static void mouse_motion(int x, int y);
+void re_place_light_source();
 
 void read_new_frame() {
     std::stringstream ssframe;
@@ -181,9 +183,12 @@ static void reset_view(int w, int h){
         eye.x, eye.y, eye.z,
         centre.x, centre.y, centre.z,
         up.x, up.y, up.z );
+
     arcball_setzoom( SPHERE_RADIUS, eye, up );
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity() ; }
+    glLoadIdentity() ; 
+
+}
 
 void set_colour(float r, float g, float b){
     float ambient = 0.2f;
@@ -207,12 +212,21 @@ void set_colour(float r, float g, float b){
     glMaterialfv (GL_FRONT_AND_BACK, GL_SPECULAR, mat);
     glMaterialf (GL_FRONT_AND_BACK, GL_SHININESS, 1.0);}
 
+void re_place_light_source(){
+    GLfloat position[] = { 50.0, 0.0, -30.0, 1.0 };
+    GLfloat position2[] = { 0.0, 100.0, 00.0, 1.0 };
+    GLfloat position3[] = { 50.0, 0.0, 30.0, 1.0 };
+    glLightfv(GL_LIGHT0, GL_POSITION, position);
+    glLightfv(GL_LIGHT1, GL_POSITION, position2);
+    glLightfv(GL_LIGHT2, GL_POSITION, position3);
+}
+
 void my_init(){
     GLfloat ambient[] = { 0.1, 0.1, 0.1, 1.0 };
 
     GLfloat diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat position[] = { 100.0, 0.0, -60.0, 1.0 };
+    GLfloat position[] = { 50.0, 0.0, -30.0, 1.0 };
 
     GLfloat diffuse2[] = { 0.3, 0.3, 0.3, 1.0 };
     GLfloat specular2[] = { 0.3, 0.3, 0.3, 1.0 };
@@ -220,7 +234,7 @@ void my_init(){
 
     GLfloat diffuse3[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular3[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat position3[] = { 100.0, 0.0, 60.0, 1.0 };
+    GLfloat position3[] = { 50.0, 0.0, 30.0, 1.0 };
 
     GLfloat lmodel_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
     GLfloat local_view[] = { 0.0 };
@@ -299,6 +313,7 @@ static void drag_scene(int x, int y){
 static void draw_scene(){
     glTranslatef( object_translate.x, object_translate.y, object_translate.z );
     arcball_rotate();
+    re_place_light_source();
 
     // draw ground
     set_colour (0.2,0.2,0.2);
@@ -348,7 +363,7 @@ static void resize(int w, int h){
 
 static void display(){
     if (auto_update == true) {
-        frame++;
+        frame += dframe;
         read_new_frame();}
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -361,7 +376,6 @@ static void display(){
 static void key(unsigned char key, int x, int y){
     switch (key){
         case 27 : 
-        case 'q':
             shutdown_scene();
             exit(0);
             break;
@@ -377,10 +391,10 @@ static void key(unsigned char key, int x, int y){
         case 'd':
             object_translate.x -= .2;
             break;
-        case '-':
+        case 'e':
             object_translate.z += 1;
             break;
-        case '+':
+        case 'q':
             object_translate.z -= 1;
             break;
         case 'n':
@@ -393,6 +407,14 @@ static void key(unsigned char key, int x, int y){
         case 'r':
             frame = 1;
             read_new_frame();
+            break;
+        case '+':
+            dframe++;
+            std::cout << "current delta_frame: " << dframe << std::endl;
+            break;
+        case '-':
+            dframe--;
+            std::cout << "current delta_frame: " << dframe << std::endl;
             break;
         case '1':
             glEnable(GL_LIGHTING);

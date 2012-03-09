@@ -22,6 +22,7 @@
 #include <ditto/public_library/algebra/newmat11/newmatap.h>
 #include <ditto/public_library/algebra/newmat11/newmat.h>
 #include <ditto/public_library/algebra/newmat11/newmatio.h>
+#include <ditto/public_library/visualization/vtk_writer.h>
 
 namespace ditto { namespace cloth_3d {
 
@@ -103,6 +104,8 @@ public:
     void add_ball_collision(T xb, T yb, T zb, T rb, T spring_constant);
 
     void write_output(int frame);
+
+    void write_vtk(int frame);
 };
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -324,6 +327,48 @@ write_output(int frame) {
        fprintf(file," %d\n", num_of_clothes);
 
        fclose(file);
+}
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: write_vtk
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+write_vtk(int frame) {
+       std::stringstream ss;
+       ss << frame;
+
+       // write sphere
+       std::string sphere_name = "output/sphere"+ss.str()+".vtk";
+       if (use_ball_collision) {
+           ditto::visualization::write_vtk_sphere(ball_center(0), ball_center(1), ball_center(2), ball_radius*0.98, sphere_name);
+       }
+
+       // write cloth(es)
+       for (int cloth_count = 1; cloth_count <= num_of_clothes; cloth_count++) {
+           std::stringstream ss2;
+           ss2 << cloth_count;
+           std::string cloth_name = "output/cloth"+ss2.str()+"_"+ss.str()+".vtk";
+           std::fstream out(cloth_name.c_str(), std::ios_base::out);
+           out << "# vtk DataFile Version 3.0\n"
+               << "vtk output\n"
+               << "ASCII\n"
+               << "DATASET POLYDATA\n"
+               << "POINTS " << mesh.nodes.size()/num_of_clothes << " float" << std::endl;
+
+           int start_i =  (cloth_count-1)*mesh.nodes.size()/num_of_clothes;
+           int next_start_i = cloth_count*mesh.nodes.size()/num_of_clothes;
+           for(int i = start_i; i < next_start_i; i++) {
+               out << x[i](0) << " " << x[i](1) << " " << x[i](2) << std::endl; }
+
+           out << "POLYGONS " << mesh.elements.size()/num_of_clothes << " " << 4*mesh.elements.size()/num_of_clothes << std::endl;
+           int start_e =  (cloth_count-1)*mesh.elements.size()/num_of_clothes; 
+           int next_start_e = cloth_count*mesh.elements.size()/num_of_clothes;
+           for(int e = start_e; e < next_start_e; e++) {
+               out << "3 " << mesh.elements[e](0)-start_i << " "
+                   << mesh.elements[e](1)-start_i << " "
+                   << mesh.elements[e](2)-start_i << std::endl; }
+       }
 }
 
 
