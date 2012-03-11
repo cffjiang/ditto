@@ -3,6 +3,7 @@
 // Copyright 2012, Chenfanfu Jiang
 //
 // Supporting shapes:
+//     Segment_3d
 //     Triangle_2d
 //     Triangle_3d
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -14,6 +15,32 @@
 #include <ditto/public_library/algebra/linear_algebra.h>
 
 namespace ditto { namespace geometry {
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Class: Segment_3d
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T>
+class Segment_3d {
+public:
+    ditto::algebra::VECTOR_3D<T> A;
+    ditto::algebra::VECTOR_3D<T> B;
+
+    template<typename Point>
+    Segment_3d(Point &iA, Point &iB) {
+        for (int i=0; i<3; i++) {
+            A(i) = iA(i);
+            B(i) = iB(i); } }
+
+    T get_length() {
+        ditto::algebra::VECTOR_3D<T> AmB = A-B;
+        return AmB.Magnitude(); }
+
+    template<typename Point>
+    T find_closest_point(Point &P, Point &P_hat, T &lambda) { //TODO
+        return 0;
+    }
+
+};
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 // Class: Triangle_2d
