@@ -29,6 +29,9 @@ public:
     typedef typename std::vector<node_type> node_list_type;
     typedef ditto::algebra::VECTOR_3D<int> element_type;
     typedef typename std::vector<element_type> element_list_type;
+    typedef ditto::algebra::VECTOR_2D<int> edge_type;
+    typedef typename std::vector<edge_type> edge_list_type;
+    
     typedef typename std::vector<T> rho_list_type;
     typedef typename std::vector<T> area_list_type;
     typedef typename std::vector<T> mass_list_type;
@@ -50,14 +53,12 @@ public:
 
     node_list_type nodes;
     element_list_type elements;
+    edge_list_type edges;
     rho_list_type rho;
     area_list_type area;
     mass_list_type mass;
     
     Triangle_Mesh_3d(){}
-
-    Triangle_Mesh_3d(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1) {
-        initialize_regular_mesh(input_Nx, input_Ny, input_xmin, input_xmax, input_ymin, input_ymax, input_rho); }
 
     void initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1);
 
@@ -97,6 +98,20 @@ initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xm
             elements.push_back(first_element);
             elements.push_back(second_element); }}
 
+    // build edges
+    for (int j=0; j<Ny; j++) {
+        for (int i=0; i<Nx-1; i++) {
+            edge_type current_edge(Nx*j+i, Nx*j+i+1);
+            edges.push_back(current_edge); }}
+    for (int i=0; i<Nx; i++) {
+        for (int j=0; j<Ny-1; j++) {
+            edge_type current_edge(Nx*j+i, Nx*(j+1)+i);
+            edges.push_back(current_edge); }}
+    for (int i=0; i<Nx-1; i++) {
+        for (int j=0; j<Ny-1; j++) {
+            edge_type current_edge(Nx*j+i, Nx*(j+1)+i+1);
+            edges.push_back(current_edge); }}
+
     // build rho and area
     for (unsigned int i=0; i<elements.size(); i++) {
         rho.push_back(input_rho);
@@ -119,15 +134,17 @@ initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xm
 
     // debug code
     /*
-      for (unsigned int i=0; i<nodes.size(); i++) {
-      std::cout << "\nnode: " << nodes[i](0) << " " << nodes[i](1) << " " << node[i](2) << std::endl;
-      }
+    for (unsigned int i=0; i<nodes.size(); i++) {
+        std::cout << "\nnode: " << nodes[i](0) << " " << nodes[i](1) << " " << nodes[i](2) << std::endl;
+    }
+    
+    for (unsigned int i=0; i<elements.size(); i++) {
+        std::cout << "\nelement: " << elements[i](0) << " " << elements[i](1) << " " << elements[i](2) << std::endl;
+    }
 
-      for (unsigned int i=0; i<elements.size(); i++) {
-      std::cout << "\nelement: " << elements[i](0) << " " << elements[i](1) << " " << elements[i](2) << std::endl;
-      std::cout << "rho: " << rho[i] << std::endl;
-      std::cout << "area: " << area[i] << std::endl;
-      }
+    for (unsigned int i=0; i<edges.size(); i++) {
+        std::cout << "\nedge: " << edges[i](0) << " " << edges[i](1) << std::endl;
+    }
     */    
 
 }
@@ -174,6 +191,22 @@ initialize_parellel_clothes(const int num_clothes, const int input_Nx, const int
                 element_type second_element(Nx*Ny*cloth_index + Nx*j+i, Nx*Ny*cloth_index + Nx*j+i+1, Nx*Ny*cloth_index + Nx*(j+1)+i+1);
                 elements.push_back(first_element);
                 elements.push_back(second_element); }}
+     
+        // build edges
+        int shift = Nx*Ny*cloth_index;
+        for (int j=0; j<Ny; j++) {
+            for (int i=0; i<Nx-1; i++) {
+                edge_type current_edge(shift+Nx*j+i, shift+Nx*j+i+1);
+                edges.push_back(current_edge); }}
+        for (int i=0; i<Nx; i++) {
+            for (int j=0; j<Ny-1; j++) {
+                edge_type current_edge(shift+Nx*j+i, shift+Nx*(j+1)+i);
+                edges.push_back(current_edge); }}
+        for (int i=0; i<Nx-1; i++) {
+            for (int j=0; j<Ny-1; j++) {
+                edge_type current_edge(shift+Nx*j+i, shift+Nx*(j+1)+i+1);
+                edges.push_back(current_edge); }}
+        
     }
 
     // build rho and area
@@ -195,6 +228,22 @@ initialize_parellel_clothes(const int num_clothes, const int input_Nx, const int
         mass[node2] += rho[i]*area[i] / 3.0;; 
         mass[node3] += rho[i]*area[i] / 3.0;; 
     }
+    
+    // debug code
+    /*
+    for (unsigned int i=0; i<nodes.size(); i++) {
+        std::cout << "\nnode: " << nodes[i](0) << " " << nodes[i](1) << " " << nodes[i](2) << std::endl;
+    }
+    
+    for (unsigned int i=0; i<elements.size(); i++) {
+        std::cout << "\nelement: " << elements[i](0) << " " << elements[i](1) << " " << elements[i](2) << std::endl;
+    }
+
+    for (unsigned int i=0; i<edges.size(); i++) {
+        std::cout << "\nedge: " << edges[i](0) << " " << edges[i](1) << std::endl;
+    }
+    */
+
 }
 
 } } // end namespaces
