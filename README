@@ -2,11 +2,9 @@ Ditto!!!
 ---------------
 Install:
 
-1. Set environment variable DITTO_ROOT = the folder that contains /diito
+Set environment variable DITTO_ROOT = the folder that contains /diito
 
-2. Compile NEWMAT library for your system. It lies inside /ditto/public_library/algebra/
-
-3. That's it! Most projects links to nothing, sometimes you need to link to OpenGL, sometimes need to link to NEWMAT.
+That's it! Most projects links to nothing, sometimes you need to link to OpenGL
 
 ----------------------birthday--------------------------------------
 This is my personal Computer Science library!

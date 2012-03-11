@@ -2,7 +2,6 @@
 // ditto/public_library/cloth_3d/neo_hookean_cloth_3d_fvm_explicit.h
 // Copyright 2012, Chenfanfu Jiang
 //
-// Require NEWMAT library compiled
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
 #ifndef DITTO_PUBLIC_LIBRARY_CLOTH_3D_NEO_HOOKEAN_CLOTH_3D_FVM_EXPLICIT_H
@@ -19,9 +18,9 @@
 #include <ctime>
 
 #include <ditto/public_library/algebra/linear_algebra.h>
-#include <ditto/public_library/algebra/newmat11/newmatap.h>
-#include <ditto/public_library/algebra/newmat11/newmat.h>
-#include <ditto/public_library/algebra/newmat11/newmatio.h>
+#include <ditto/public_library/algebra/Eigen3/Eigen/Dense>
+#include <ditto/public_library/algebra/Eigen3/Eigen/SVD>
+#include <ditto/public_library/algebra/Eigen3/Eigen/Jacobi>
 #include <ditto/public_library/visualization/vtk_writer.h>
 
 namespace ditto { namespace cloth_3d {
@@ -193,37 +192,40 @@ compute_elasticity() {
         ditto::algebra::Multiply(Ds, Dm_inverse, F);
 
         // SVD
-        NEWMAT::Matrix A(3,2); A = 0.0;
-        NEWMAT::Matrix U(3,2); U = 0.0;
-        NEWMAT::Matrix V(2,2); V = 0.0;
-        NEWMAT::DiagonalMatrix D(2);
+        Eigen::MatrixXf A(3,2);
         for (int i=0; i<3; i++) {
             for (int j=0; j<2; j++) {
-                A.element(i,j) = F(i,j); }}
-        NEWMAT::SVD(A, D, U, V);
-        // debug
-        // std::cout << A - U*D*(V.t());
+                A(i,j) = F(i,j); }}
+
+        Eigen::JacobiSVD<Eigen::MatrixXf> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        Eigen::MatrixXf U = svd.matrixU();
+        Eigen::MatrixXf V = svd.matrixV();
+        Eigen::MatrixXf D(2,2);
+        D << svd.singularValues()(0), 0.0, 0.0, svd.singularValues()(1);
+        T sigma1 = svd.singularValues()(0);
+        T sigma2 = svd.singularValues()(1);
 
         // Compute P
-        NEWMAT::DiagonalMatrix dPhidSigma(2);
-        dPhidSigma.element(0) = 2*mu*(D.element(0)-1) + lambda*(D.element(0)*D.element(1)-1)*D.element(1);
-        dPhidSigma.element(1) = 2*mu*(D.element(1)-1) + lambda*(D.element(0)*D.element(1)-1)*D.element(0);
-        NEWMAT::Matrix P(3,2); P = 0.0;
-        P = U * dPhidSigma * (V.t());
+        Eigen::MatrixXf dPhidSigma(2,2);
+        dPhidSigma <<  2*mu*(sigma1-1) + lambda*(sigma1*sigma2-1)*sigma2, 0.0, 0.0,  2*mu*(sigma2-1) + lambda*(sigma1*sigma2-1)*sigma1;
+        Eigen::MatrixXf P = U * dPhidSigma * V.transpose();
 
         // Compute Force matrix
         T my_area = 0.5 * std::abs(Dm(0,0)* Dm(1,1) -  Dm(0,1)* Dm(1,0));
 
-        NEWMAT::Matrix Dminvt(2,2); Dminvt = 0.0;
+
+        Eigen::MatrixXf Dminvt(2,2);
         for (int i=0; i<2; i++) {
             for (int j=0; j<2; j++) {
-                Dminvt.element(i,j) = Dm_inverse_list[e](j,i); }}
-        NEWMAT::Matrix Force(3,2); Force = 0.0;
+                Dminvt(i,j) = Dm_inverse_list[e](j,i); }}
+
+        Eigen::MatrixXf Force(3,2);
+
         Force = -my_area * P * Dminvt;
         
         // Compute force contributions to nodes
-        node_3d_type stress_node2(Force.element(0,0), Force.element(1,0), Force.element(2,0));
-        node_3d_type stress_node3(Force.element(0,1), Force.element(1,1), Force.element(2,1));
+        node_3d_type stress_node2(Force(0,0), Force(1,0), Force(2,0));
+        node_3d_type stress_node3(Force(0,1), Force(1,1), Force(2,1));
         node_3d_type stress_node1 = (stress_node2 + stress_node3) * (-1.0);
 
         f[mesh.elements[e](0)] = f[mesh.elements[e](0)] + stress_node1;

@@ -31,7 +31,7 @@ int main(int argc, char ** argv)
         E = 1000;
         rho = 10;
         use_gravity = true;
-        ballv = 5;
+        ballv = 2;
         ball_spring_constant = 1e3;
         int num_of_clothes = 5;
         ditto::geometry::Triangle_Mesh_3d<T> tm;

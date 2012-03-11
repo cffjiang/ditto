@@ -24,7 +24,7 @@ compile_flags.append('-fprofile-arcs')
 compile_flags.append('-ftest-coverage')
 
 # process command line arguments
-build_type = ARGUMENTS.get('type','debug')
+build_type = ARGUMENTS.get('type','release')
 if build_type == 'release':
 
     build_dir = 'build/release'
@@ -54,8 +54,6 @@ include_paths.append(ditto_root);
 
 lib_paths.append('/usr/local/lib')
 lib_paths.append('/usr/local/glew/lib')
-newmat_path = ditto_root + '/ditto/public_library/algebra/newmat11'
-lib_paths.append(newmat_path)
 
 compile_flags.append('-Wno-deprecated')
 
@@ -66,7 +64,6 @@ libs.append('GLU')
 libs.append('glut')
 libs.append('m')
 libs.append('gcov')
-libs.append('newmat')
 
 env = Environment(
 CXX=compiler,
