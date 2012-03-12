@@ -312,6 +312,8 @@ public:
 
     void Set_To_Zero() { v1 = T(); v2 = T(); v3 = T(); }
     
+    void Set_Value(T a, T b, T c) { v1 = a; v2 = b; v3 = c; }
+
     static VECTOR_3D<T> Standard_Basis_Vector(const int i){
         if(i==0) return VECTOR_3D<T>((T)1,0,0);
         if(i==1) return VECTOR_3D<T>(0,(T)1,0);

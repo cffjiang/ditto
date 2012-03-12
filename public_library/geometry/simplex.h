@@ -22,22 +22,30 @@ namespace ditto { namespace geometry {
 template<class T>
 class Segment_3d {
 public:
-    ditto::algebra::VECTOR_3D<T> A;
-    ditto::algebra::VECTOR_3D<T> B;
+    typedef ditto::algebra::VECTOR_3D<T> Point;
+    typedef ditto::algebra::VECTOR_3D<T> Vec;
+    Point A;
+    Point B;
 
-    template<typename Point>
     Segment_3d(Point &iA, Point &iB) {
         for (int i=0; i<3; i++) {
             A(i) = iA(i);
             B(i) = iB(i); } }
 
     T get_length() {
-        ditto::algebra::VECTOR_3D<T> AmB = A-B;
+        Vec AmB = A-B;
         return AmB.Magnitude(); }
 
-    template<typename Point>
-    T find_closest_point(Point &P, Point &P_hat, T &lambda) { //TODO
-        return 0;
+    T find_closest_point(Point &P, Point &P_hat, T &lambda) { // P_hat = (1-lambda)A + lambda*B
+        Vec PmA = P-A;
+        Vec BmA = B-A;
+        lambda = PmA.Dot(BmA) / BmA.Dot(BmA);
+
+        if (lambda < 0) lambda = 0;
+        else if (lambda > 1) lambda = 1;
+
+        P_hat = A*(1-lambda) + B*lambda;
+        return (P-P_hat).Magnitude();
     }
 
 };
@@ -70,7 +78,13 @@ public:
 template<class T>
 class Triangle_3d {
 public:
+    typedef ditto::algebra::VECTOR_3D<T> Point;
+    typedef ditto::algebra::VECTOR_3D<T> Vec;
+
     T x[3][3];
+    Point A;
+    Point B;
+    Point C;
     
     Triangle_3d(T input[]) {
         int k = 0;
@@ -79,6 +93,10 @@ public:
                 x[i][j] = input[k++];
             }
         }
+
+        A.Set_Value(x[0][0], x[0][1], x[0][2]);
+        B.Set_Value(x[1][0], x[1][1], x[1][2]);
+        C.Set_Value(x[2][0], x[2][1], x[2][2]);
     }
 
     template<class Vec3>
@@ -88,6 +106,10 @@ public:
             x[1][i] = v1[i];
             x[2][i] = v2[i];
         }
+
+        A.Set_Value(x[0][0], x[0][1], x[0][2]);
+        B.Set_Value(x[1][0], x[1][1], x[1][2]);
+        C.Set_Value(x[2][0], x[2][1], x[2][2]);
     }
 
     T get_area() {
@@ -108,6 +130,73 @@ public:
         ditto::algebra::VECTOR_3D<T> edge2(x[2][0]-x[0][0], x[2][1]-x[0][1], x[2][2]-x[0][2]);
         ditto::algebra::VECTOR_3D<T> normal = (edge1.Cross_Product(edge2)).Normalize();
         for (int i=0; i<3; i++) n(i) = normal(i); }
+
+    T find_closest_point(Point &P, Point &P_hat, T &ksi1, T &ksi2) { // P_hat = (1-ksi1-ksi2)A + ksi1*B + ksi2*C
+        Vec BmA = B - A;
+        Vec CmA = C - A;
+        Vec PmA = P - A;
+        ditto::algebra::MATRIX_2X2<T> M(BmA.Dot(BmA), CmA.Dot(BmA), CmA.Dot(BmA), CmA.Dot(CmA));
+        M.Invert();
+        ditto::algebra::VECTOR_2D<T> rhs(PmA.Dot(BmA), PmA.Dot(CmA));
+        ditto::algebra::VECTOR_2D<T> ksi = M*rhs;
+
+        ksi1 = ksi(0);
+        ksi2 = ksi(1);
+
+        T d;
+
+        Point P_on_plane = A*(1-ksi1-ksi2) + B*ksi1 + C*ksi2;
+
+        if (ksi1>=0 && ksi1<=1 && ksi2>=0 && ksi2<=1 && (1-ksi1-ksi2)>=0 && (1-ksi1-ksi2)<=1) { 
+            P_hat = P_on_plane;
+            d = (P_hat-P).Magnitude(); }
+        else {
+            d = 100000;
+            T lambda1, lambda2, lambda3;
+            int flag = -1;
+
+            Segment_3d AB(A, B);
+            Point P_on_AB;
+            T distance_to_AB = AB.find_closest_point(P_on_plane, P_on_AB, lambda1);
+            if (distance_to_AB < d) {
+                d = distance_to_AB; 
+                flag = 1; }
+            
+            Segment_3d BC(B, C);
+            Point P_on_BC;
+            T distance_to_BC = BC.find_closest_point(P_on_plane, P_on_BC, lambda2);
+            if (distance_to_BC < d) {
+                d = distance_to_BC; 
+                flag = 2; }
+
+            Segment_3d CA(C, A);
+            Point P_on_CA;
+            T distance_to_CA = CA.find_closest_point(P_on_plane, P_on_CA, lambda3);
+            if (distance_to_CA < d) {
+                d = distance_to_CA; 
+                flag = 3; }
+
+            if (flag == 1) {
+                P_hat = P_on_AB; 
+                ksi2 = 0;
+                ksi1 = lambda1;
+            }
+            else if (flag == 2) {
+                P_hat = P_on_BC; 
+                ksi1 = 1-lambda2;
+                ksi2 = lambda2;
+            }
+            else if (flag == 3) {
+                P_hat = P_on_CA; 
+                ksi2 = 1-lambda3;
+                ksi1 = 0;
+            }
+        }
+
+        return d;
+
+    }
+
 };
 
 
