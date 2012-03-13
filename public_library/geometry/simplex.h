@@ -36,10 +36,22 @@ public:
         Vec AmB = A-B;
         return AmB.Magnitude(); }
 
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function: find_closest_point
+    // This function takes care of degeneracy case: Segment too short
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     T find_closest_point(Point &P, Point &P_hat, T &lambda) { // P_hat = (1-lambda)A + lambda*B
         Vec PmA = P-A;
         Vec BmA = B-A;
-        lambda = PmA.Dot(BmA) / BmA.Dot(BmA);
+        
+        // degenerate case: A is too close to B
+        T length_square = BmA.Dot(BmA);
+        if (length_square < 1e-10) {
+            lambda = 0;
+            P_hat = A;
+            return  (P-P_hat).Magnitude(); }
+
+        lambda = PmA.Dot(BmA) / length_square;
 
         if (lambda < 0) lambda = 0;
         else if (lambda > 1) lambda = 1;
@@ -102,9 +114,9 @@ public:
     template<class Vec3>
     Triangle_3d(const Vec3 &v0, const Vec3 &v1, const Vec3 &v2) {
         for (int i=0; i<3; i++) {
-            x[0][i] = v0[i];
-            x[1][i] = v1[i];
-            x[2][i] = v2[i];
+            x[0][i] = v0(i);
+            x[1][i] = v1(i);
+            x[2][i] = v2(i);
         }
 
         A.Set_Value(x[0][0], x[0][1], x[0][2]);
@@ -131,6 +143,11 @@ public:
         ditto::algebra::VECTOR_3D<T> normal = (edge1.Cross_Product(edge2)).Normalize();
         for (int i=0; i<3; i++) n(i) = normal(i); }
 
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function: find_closest_point
+    // Before calling this function, should make sure area > tol
+    // in order to avoid divide-by-zero problem.
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     T find_closest_point(Point &P, Point &P_hat, T &ksi1, T &ksi2) { // P_hat = (1-ksi1-ksi2)A + ksi1*B + ksi2*C
         Vec BmA = B - A;
         Vec CmA = C - A;
@@ -151,30 +168,30 @@ public:
             P_hat = P_on_plane;
             d = (P_hat-P).Magnitude(); }
         else {
-            d = 100000;
+            T dmin = 100000;
             T lambda1, lambda2, lambda3;
             int flag = -1;
 
-            Segment_3d AB(A, B);
+            Segment_3d<T> AB(A, B);
             Point P_on_AB;
             T distance_to_AB = AB.find_closest_point(P_on_plane, P_on_AB, lambda1);
-            if (distance_to_AB < d) {
-                d = distance_to_AB; 
-                flag = 1; }
+            if (distance_to_AB < dmin) {
+                flag = 1; 
+                dmin = distance_to_AB;}
             
-            Segment_3d BC(B, C);
+            Segment_3d<T> BC(B, C);
             Point P_on_BC;
             T distance_to_BC = BC.find_closest_point(P_on_plane, P_on_BC, lambda2);
-            if (distance_to_BC < d) {
-                d = distance_to_BC; 
-                flag = 2; }
+            if (distance_to_BC < dmin) {
+                flag = 2; 
+                dmin = distance_to_BC;}
 
-            Segment_3d CA(C, A);
+            Segment_3d<T> CA(C, A);
             Point P_on_CA;
             T distance_to_CA = CA.find_closest_point(P_on_plane, P_on_CA, lambda3);
-            if (distance_to_CA < d) {
-                d = distance_to_CA; 
-                flag = 3; }
+            if (distance_to_CA < dmin) {
+                flag = 3; 
+                dmin = distance_to_CA;}
 
             if (flag == 1) {
                 P_hat = P_on_AB; 
@@ -193,6 +210,7 @@ public:
             }
         }
 
+        d = (P_hat - P).Magnitude();
         return d;
 
     }
