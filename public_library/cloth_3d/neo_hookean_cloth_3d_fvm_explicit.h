@@ -17,6 +17,7 @@
 #include <vector>
 #include <ctime>
 
+#include <ditto/public_library/geometry/simplex.h>
 #include <ditto/public_library/algebra/linear_algebra.h>
 #include <ditto/public_library/algebra/Eigen3/Eigen/Dense>
 #include <ditto/public_library/algebra/Eigen3/Eigen/SVD>
@@ -55,6 +56,11 @@ public:
     bool use_gravity;
     bool use_ball_collision;
     bool use_ground_collision;
+
+    bool use_self_collision;
+    int self_collision_repulsion_iters;
+    T self_collision_distance_tolerance;
+
     node_3d_type ball_center;
     T ball_radius;
 
@@ -87,6 +93,7 @@ public:
         pre_build_Dm_inverse();
         use_ball_collision = false;
         use_ground_collision = false;
+        use_self_collision = false;
         num_of_clothes = 1;
     }
 
@@ -104,7 +111,13 @@ public:
 
     void add_ball_collision(T xb, T yb, T zb, T rb, T spring_constant);
 
-    void add_ground_collision(T ground_level, T spring_constant);
+    void add_ground_collision(T ground_level, T spring_constant, T friction_constant);
+    
+    void do_point_triangle_repulsion(int iterations, T d_tol);
+
+    void do_segment_segment_repulsion(int iterations, T d_tol);
+
+    void switch_self_collision(bool s, int input_iter, T input_dtol);
 
     void write_output(int frame);
 
@@ -162,9 +175,12 @@ compute_elasticity() {
     // build f
     f.clear();
     f.resize(mesh.nodes.size());
+
+#pragma omp parallel for schedule(static)
     for (unsigned int i=0; i<f.size(); i++){
         f[i](0) = f[i](1) = f[i](2) = 0.0;}
 
+#pragma omp parallel for schedule(static)
     for (int e = 0; e < mesh.elements.size(); e++) {
         // get x
         node_3d_type &x1 = x[mesh.elements[e](0)];
@@ -246,13 +262,23 @@ compute_elasticity() {
 template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
 update_one_step() {
-    // forward euler
+    // update v
+#pragma omp parallel for schedule(static)
     for (unsigned int i=0; i<mesh.nodes.size(); i++) {
-        v[i] = v[i] + dt * f[i] * (1.0/mesh.mass[i]);
-        x[i] = x[i] + dt * v[i]; 
-    }
+        v[i] = v[i] + dt * f[i] * (1.0/mesh.mass[i]);}
     
-    // fix positions for dirichlet nodes
+    // modify v with self collision impulse
+    if (use_self_collision) {
+      do_point_triangle_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); 
+      do_segment_segment_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); }
+
+    // update x
+#pragma omp parallel for schedule(static)
+    for (unsigned int i=0; i<mesh.nodes.size(); i++) {
+        x[i] = x[i] + dt * v[i]; }
+    
+    // fix x for dirichlet nodes
+#pragma omp parallel for schedule(static)
     for (unsigned int i=0; i<dirichlet_nodes.size(); i++) {
         v[dirichlet_nodes[i]].Set_To_Zero();
         x[dirichlet_nodes[i]] = X_3d[dirichlet_nodes[i]] + dirichlet_displacement[i];
@@ -271,6 +297,8 @@ add_ball_collision(T xb, T yb, T zb, T rb, T spring_constant) {
     ball_center(0) = xb;
     ball_center(1) = yb;
     ball_center(2) = zb;
+
+#pragma omp parallel for schedule(static)
     for (unsigned int i=0; i<mesh.nodes.size(); i++) {
         node_3d_type my_position(x[i](0), x[i](1), x[i](2));
         node_3d_type center2position = my_position - ball_center;
@@ -285,16 +313,25 @@ add_ball_collision(T xb, T yb, T zb, T rb, T spring_constant) {
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
-add_ground_collision(T ground_level, T spring_constant)
+add_ground_collision(T ground_level, T spring_constant, T friction_constant)
 {
     if (!use_ground_collision) {
         use_ground_collision = true; }
-     for (unsigned int i=0; i<mesh.nodes.size(); i++) {
-         T my_y = x[i](1);
-         if (my_y < ground_level) {
-             T penetration_depth = ground_level - my_y;
-             node_3d_type push_normal(0, 1, 0);
-             f[i] = f[i] + push_normal*penetration_depth*spring_constant; } }
+
+#pragma omp parallel for schedule(static)
+    for (unsigned int i=0; i<mesh.nodes.size(); i++) {
+        T my_y = x[i](1);
+        if (my_y < ground_level) {
+            T penetration_depth = ground_level - my_y;
+            node_3d_type push_normal(0, 1, 0);
+            f[i] = f[i] + push_normal*penetration_depth*spring_constant; 
+            
+             // friction
+            node_3d_type friction_normal = v[i]*(-1.0);
+            friction_normal(1) = 0.0;
+            friction_normal.Normalize();
+            node_3d_type friction = friction_normal * v[i].Magnitude() * friction_constant; 
+            f[i] = f[i] + friction; } }
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -304,6 +341,8 @@ template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
 add_gravity() {
     node_3d_type g(0.0, -9.8, 0.0);
+
+#pragma omp parallel for schedule(static)
     for (unsigned int i=0; i<mesh.nodes.size(); i++) {
         f[i] = f[i] + mesh.mass[i] * g; }
 }
@@ -321,6 +360,130 @@ set_dirichlet_with_a_bounding_box(T x0, T xM, T y0, T yM, T z0, T zM, T xmove, T
             dirichlet_displacement.push_back(fixed_movement); }}
 }
 
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: do_point_triangle_repulsion
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+do_point_triangle_repulsion(int iterations, T d_tol) {
+    for (int iter_count = 0; iter_count < iterations; iter_count++) {
+
+#pragma omp parallel for schedule(static)
+        for (unsigned int p = 0; p < mesh.nodes.size(); p++) {
+            node_3d_type P = x[p];
+            T mp = mesh.mass[p];
+            for (unsigned int t = 0; t < mesh.elements.size(); t++) {
+                int node0 = mesh.elements[t](0);
+                int node1 = mesh.elements[t](1);
+                int node2 = mesh.elements[t](2);
+                if (node0 == p || node1 == p || node2 == p) { // don't need to check element that contains node p
+                    continue; }
+                node_3d_type A = x[node0];
+                node_3d_type B = x[node1];
+                node_3d_type C = x[node2];
+
+                ditto::geometry::Triangle_3d<T> tri(A, B, C);
+                if (tri.get_area() < 1e-10) { // if the triangle is tooooo small, ignore it
+                    continue; }
+
+                // a naive bounding box
+                T box_minx, box_maxx, box_miny, box_maxy, box_minz, box_maxz;
+                tri.get_box(d_tol, box_minx, box_maxx, box_miny, box_maxy, box_minz, box_maxz);
+                if (!( P(0)>box_minx && P(0)<box_maxx && P(1)>box_miny && P(1)<box_maxy && P(2)>box_minz && P(2)<box_maxz)) {
+                    continue;}
+            
+                node_3d_type P_hat;
+                T ksi1;
+                T ksi2;
+
+                T d = tri.find_closest_point(P, P_hat, ksi1, ksi2);
+                if (d < d_tol) {
+                    node_3d_type n = (P - P_hat)*(1.0/d);
+                    node_3d_type v_hat = v[node0]*(1-ksi1-ksi2) + v[node1]*ksi1 + v[node2]*ksi2;
+                    node_3d_type v_rel = v[p] - v_hat;
+                    T v_rel_dot_n = v_rel.Dot(n);
+                    if (v_rel_dot_n < 0) {
+                        T m0 = mesh.mass[node0];
+                        T m1 = mesh.mass[node1];
+                        T m2 = mesh.mass[node2];
+                        T ksi0 = 1-ksi1-ksi2;
+                        T impulse = -v_rel_dot_n / (  1.0/mp +  ksi0*ksi0/m0  +  ksi1*ksi1/m1  +  ksi2*ksi2/m2  );
+
+                        v[p] = v[p] + n*(impulse/mp);
+                        v[node0] = v[node0] - n*(ksi0*impulse/m0);
+                        v[node1] = v[node1] - n*(ksi1*impulse/m1);
+                        v[node2] = v[node2] - n*(ksi2*impulse/m2); }}}}}
+}
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: do_segment_segment_repulsion
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+do_segment_segment_repulsion(int iterations, T d_tol) {
+    for (int iter_count = 0; iter_count < iterations; iter_count++) {
+#pragma omp parallel for schedule(static)        
+        for (unsigned int first_edge_index = 0; first_edge_index < mesh.edges.size(); first_edge_index++) {
+            int node_A = mesh.edges[first_edge_index](0);
+            int node_B = mesh.edges[first_edge_index](1);
+            T mA = mesh.mass[node_A];
+            T mB = mesh.mass[node_B];
+            node_3d_type A = x[node_A];
+            node_3d_type B = x[node_B];
+            ditto::geometry::Segment_3d<T> edgeAB(A, B);
+            for (unsigned int second_edge_index = 0; second_edge_index < mesh.edges.size(); second_edge_index++) {
+                int node_C = mesh.edges[second_edge_index](0);
+                int node_D = mesh.edges[second_edge_index](1);
+                if (node_C == node_A || node_C == node_B || node_D == node_A || node_D == node_B) { // don't need to check edge pair that share node
+                    continue; }
+                
+                node_3d_type C = x[node_C];
+                node_3d_type D = x[node_D];
+                ditto::geometry::Segment_3d<T> edgeCD(C, D);
+
+                // a naive bounding box
+                T ABminx, ABmaxx, ABminy, ABmaxy, ABminz, ABmaxz;
+                T CDminx, CDmaxx, CDminy, CDmaxy, CDminz, CDmaxz;
+                edgeAB.get_box(d_tol, ABminx, ABmaxx, ABminy, ABmaxy, ABminz, ABmaxz);
+                edgeCD.get_box(d_tol, CDminx, CDmaxx, CDminy, CDmaxy, CDminz, CDmaxz);
+                if (ABminx > CDmaxx || ABmaxx < CDminx || ABminy > CDmaxy || ABmaxy < CDminy || ABminz > CDmaxz || ABmaxz < CDminz) {
+                    continue;}
+
+                node_3d_type P;
+                node_3d_type Q;
+                T s,t;
+                T d = edgeAB.find_closest_points_seg_seg(edgeCD, P, Q, s, t);
+                if (d < d_tol) {
+                    T ksiA = 1-s;
+                    T ksiB = s;
+                    T ksiC = 1-t;
+                    T ksiD = t;
+                    node_3d_type n = (P-Q)*(1.0/d);
+                    node_3d_type vP = v[node_A]*ksiA + v[node_B]*ksiB;
+                    node_3d_type vQ = v[node_C]*ksiC + v[node_D]*ksiD;
+                    node_3d_type v_rel = vP - vQ;
+                    T v_rel_dot_n = v_rel.Dot(n);
+                    if (v_rel_dot_n < 0) {
+                        T mC = mesh.mass[node_C];
+                        T mD = mesh.mass[node_D];
+                        T impulse = -v_rel_dot_n / ( ksiA*ksiA/mA  +  ksiB*ksiB/mB  +  ksiC*ksiC/mC  +  ksiD*ksiD/mD );
+
+                        v[node_A] = v[node_A] + n*(ksiA*impulse/mA);
+                        v[node_B] = v[node_B] + n*(ksiB*impulse/mB);
+                        v[node_C] = v[node_C] - n*(ksiC*impulse/mC);
+                        v[node_D] = v[node_D] - n*(ksiD*impulse/mD); }}}}}
+}
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: write_output
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+switch_self_collision(bool s, int input_iter, T input_dtol) {
+    use_self_collision = s;
+    self_collision_repulsion_iters = input_iter;
+    self_collision_distance_tolerance = input_dtol;
+}
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 // Function: write_output
@@ -364,7 +527,7 @@ write_vtk(int frame) {
        // write sphere
        std::string sphere_name = "output/sphere"+ss.str()+".vtk";
        if (use_ball_collision) {
-           ditto::visualization::write_vtk_sphere(ball_center(0), ball_center(1), ball_center(2), ball_radius*0.98, sphere_name);
+           ditto::visualization::write_vtk_sphere(ball_center(0), ball_center(1), ball_center(2), ball_radius*0.8, sphere_name);
        }
 
        // write cloth(es)

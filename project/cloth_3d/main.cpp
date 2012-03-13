@@ -10,12 +10,24 @@
 #include <GL/glut.h>
 #include <cstdlib>
 #include <cmath>
-
+#include <omp.h>
+#include <ctime>
 #include <ditto/public_library/geometry/triangle_mesh_3d.h>
 #include <ditto/public_library/cloth_3d/neo_hookean_cloth_3d_fvm_explicit.h>
 
+double diffclock(clock_t clock1,clock_t clock2)
+{
+    double diffticks=clock1-clock2;
+    double diffms=(diffticks*10)/CLOCKS_PER_SEC;
+    return diffms;
+}
+
 int main(int argc, char ** argv)
 {
+#ifdef _OPENMP
+    omp_set_num_threads(8);
+#endif
+
     typedef double T;
     int test = 1;
     T dt;
@@ -25,6 +37,7 @@ int main(int argc, char ** argv)
     T ballv;
     T ball_spring_constant;
     int frame;
+    int last_frame = 5000;
    
     if (test == 1) { // ball pass several hang clothes
         dt = 1.0/1000.0;
@@ -32,21 +45,67 @@ int main(int argc, char ** argv)
         rho = 10;
         use_gravity = true;
         ballv = 2;
-        ball_spring_constant = 1e3;
-        int num_of_clothes = 5;
+        ball_spring_constant = 1e4;
+        int num_of_clothes = 3;
         ditto::geometry::Triangle_Mesh_3d<T> tm;
-        tm.initialize_parellel_clothes(num_of_clothes ,21,21, -0.5,0.5, -0.5, 0.5,-0.3,0.3, rho);
+
+        tm.initialize_parellel_clothes(num_of_clothes ,11,11, -0.5,0.5, -0.5, 0.5,-0.3,0.3, rho);
+        // tm.initialize_regular_mesh(11,11, -0.5,0.5, -0.5, 0.5, rho);
+
         ditto::cloth_3d::Neo_Hookean_Cloth_3d_Fvm_Explicit<T, ditto::geometry::Triangle_Mesh_3d<T> > cloth(tm, dt, E, 0.3, 0.001, use_gravity);
         cloth.aware_of_num_of_clothes(num_of_clothes);
         cloth.set_dirichlet_with_a_bounding_box(-100,100, 0.4, 0.6, -100, 100, 0.0, 0.0, 0.0);
+        frame = 1;
+        clock_t very_begin=clock();
+        while (1) {
+            clock_t begin=clock();
+    
+            std::cout << "--- Frame " << frame <<"  -------------------------------------" << std::endl;
+            std::cout << "  simulating time: " << (frame-1)*dt <<  "\n";
+            cloth.compute_elasticity();
+            cloth.add_gravity();
+            cloth.add_ball_collision(0, 0, 0.7-(frame-1)*dt*ballv, 0.3, ball_spring_constant);
+            cloth.switch_self_collision(true, 1, 0.01);
+            cloth.update_one_step();
+
+            cloth.write_output(frame++);
+            // cloth.write_vtk(frame++);
+
+            if (frame > last_frame) break;
+
+            clock_t end = std::clock();
+            double cost = double(diffclock(end, begin))/1000.0;
+            double average_cost = double(diffclock(end, very_begin))/(frame*1000.0);
+            std::cout << "  Time cost for this frame: " << cost << " s"<< std::endl;
+            std::cout << "  Average time cost for each frame: " << average_cost << " s" << std::endl;
+            std::cout << "  To finish " << last_frame << " frames, still need " << average_cost*(last_frame-frame)/60.0 << " minutes.\n" << std::endl;
+
+        } 
+    }
+    else if (test == 2) {
+        dt = 1.0/1000.0;
+        E = 1000;
+        rho = 10;
+        use_gravity = true;
+        ballv = 2;
+        ball_spring_constant = 1e6;
+        int num_of_clothes = 1;
+        ditto::geometry::Triangle_Mesh_3d<T> tm;
+
+        tm.initialize_parellel_clothes(num_of_clothes ,11,21, -0.5,0.5, 1, 3,-0.1,0.1, rho);
+
+        ditto::cloth_3d::Neo_Hookean_Cloth_3d_Fvm_Explicit<T, ditto::geometry::Triangle_Mesh_3d<T> > cloth(tm, dt, E, 0.3, 0.001, use_gravity);
+        cloth.aware_of_num_of_clothes(num_of_clothes);
+        // cloth.set_dirichlet_with_a_bounding_box(-100,100, 0.4, 0.6, -100, 100, 0.0, 0.0, 0.0);
         frame = 1;
         while (1) {
             std::cout << "--- Frame " << frame <<"  -------------------------------------" << std::endl;
             std::cout << "  simulating time: " << (frame-1)*dt <<  "\n\n";
             cloth.compute_elasticity();
             cloth.add_gravity();
-            cloth.add_ball_collision(0, 0, 0.7-(frame-1)*dt*ballv, 0.3, ball_spring_constant);
-            // cloth.add_ground_collision(-0.6, 1e4);
+            cloth.add_ball_collision(0, 0.5, 0, 0.5, ball_spring_constant);
+            cloth.add_ground_collision(-0.6, 1e4, 10);
+            cloth.switch_self_collision(true, 2, 0.01);
             cloth.update_one_step();
 
             cloth.write_output(frame++);

@@ -12,6 +12,8 @@
 #define DITTO_PUBLIC_LIBRARY_GEOMETRY_SIMPLEX_H
 
 #include <cmath>
+#include <vector>
+#include <algorithm>
 #include <ditto/public_library/algebra/linear_algebra.h>
 
 namespace ditto { namespace geometry {
@@ -35,6 +37,23 @@ public:
     T get_length() {
         Vec AmB = A-B;
         return AmB.Magnitude(); }
+
+    void get_box(T buffer, T &xmin, T &xmax, T &ymin, T &ymax, T &zmin, T &zmax) {
+        std::vector<T> xs(2);
+        xs[0] = A(0); xs[1] = B(0);
+        xmin = *(std::min_element(xs.begin(), xs.end())) - buffer;
+        xmax = *(std::max_element(xs.begin(), xs.end())) + buffer;
+        
+        std::vector<T> ys(2);
+        ys[0] = A(1); ys[1] = B(1);
+        ymin = *(std::min_element(ys.begin(), ys.end())) - buffer;
+        ymax = *(std::max_element(ys.begin(), ys.end())) + buffer;
+        
+        std::vector<T> zs(2);
+        zs[0] = A(2); zs[1] = B(2);
+        zmin = *(std::min_element(zs.begin(), zs.end())) - buffer;
+        zmax = *(std::max_element(zs.begin(), zs.end())) + buffer;
+    }
 
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     // Function: find_closest_point
@@ -92,8 +111,59 @@ public:
             P = A*(1-s) + B*s;
             Q = C*(1-t) + D*t;
         } else { // AB || CD
-            // TODO
+            T dmin = 100000;
+            int flag = -1;
+            
+            Point C_hat;
+            T lambda_C_hat;
+            T dC = find_closest_point(C, C_hat, lambda_C_hat); // C_hat = (1-lambda_C_hat) A + lambda_C_hat B;
+            if (dC < dmin) {
+                flag = 1;
+                dmin = dC; }
 
+            Point D_hat;
+            T lambda_D_hat;
+            T dD = find_closest_point(D, D_hat, lambda_D_hat); // D_hat = (1-lambda_D_hat) A + lambda_D_hat B;
+            if (dD < dmin) {
+                flag = 2;
+                dmin = dD; }
+
+            Point A_hat;
+            T lambda_A_hat;
+            T dA = him.find_closest_point(A, A_hat, lambda_A_hat); // A_hat = (1-lambda_A_hat) him.A + lambda_A_hat him.B;
+            if (dA < dmin) {
+                flag = 3;
+                dmin = dA; }
+
+            Point B_hat;
+            T lambda_B_hat;
+            T dB = him.find_closest_point(B, B_hat, lambda_B_hat); // B_hat = (1-lambda_B_hat) him.A + lambda_B_hat him.B;
+            if (dB < dmin) {
+                flag = 4;
+                dmin = dB; }
+
+            assert(flag != -1);
+
+            if (flag == 1) {
+                P = C_hat;
+                Q = C;
+                s = lambda_C_hat;
+                t = 0; }
+            else if (flag == 2) {
+                P = D_hat;
+                Q = D;
+                s = lambda_D_hat;
+                t = 1; }
+            else if (flag == 3) {
+                P = A;
+                Q = A_hat;
+                s = 0;
+                t = lambda_A_hat; }
+            else if (flag == 4) {
+                P = B;
+                Q = B_hat;
+                s = 1;
+                t = lambda_B_hat; }
         }
         
         return (P-Q).Magnitude();
@@ -175,6 +245,23 @@ public:
         T cj = c*d-a*f;
         T ck = a*e-b*d;
         return 0.5*std::sqrt(ci*ci + cj*cj + ck*ck); }
+
+    void get_box(T buffer, T &xmin, T &xmax, T &ymin, T &ymax, T &zmin, T &zmax) {
+        std::vector<T> xs(3);
+        xs[0] = A(0); xs[1] = B(0); xs[2] = C(0);
+        xmin = *(std::min_element(xs.begin(), xs.end())) - buffer;
+        xmax = *(std::max_element(xs.begin(), xs.end())) + buffer;
+
+        std::vector<T> ys(3);
+        ys[0] = A(1); ys[1] = B(1); ys[2] = C(1);
+        ymin = *(std::min_element(ys.begin(), ys.end())) - buffer;
+        ymax = *(std::max_element(ys.begin(), ys.end())) + buffer;
+
+        std::vector<T> zs(3);
+        zs[0] = A(2); zs[1] = B(2); zs[2] = C(2);
+        zmin = *(std::min_element(zs.begin(), zs.end())) - buffer;
+        zmax = *(std::max_element(zs.begin(), zs.end())) + buffer;
+    }
 
     template<class Vec3>
     void get_normal(Vec3 n) {

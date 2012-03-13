@@ -213,9 +213,9 @@ void set_colour(float r, float g, float b){
     glMaterialf (GL_FRONT_AND_BACK, GL_SHININESS, 1.0);}
 
 void re_place_light_source(){
-    GLfloat position[] = { 50.0, 0.0, -30.0, 1.0 };
+    GLfloat position[] = { 50.0, 0.0, 30.0, 1.0 };
     GLfloat position2[] = { 0.0, 100.0, 00.0, 1.0 };
-    GLfloat position3[] = { 50.0, 0.0, 30.0, 1.0 };
+    GLfloat position3[] = { 30.0, 0.0, -30.0, 1.0 };
     glLightfv(GL_LIGHT0, GL_POSITION, position);
     glLightfv(GL_LIGHT1, GL_POSITION, position2);
     glLightfv(GL_LIGHT2, GL_POSITION, position3);
@@ -226,7 +226,7 @@ void my_init(){
 
     GLfloat diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat position[] = { 50.0, 0.0, -30.0, 1.0 };
+    GLfloat position[] = { 50.0, 0.0, 30.0, 1.0 };
 
     GLfloat diffuse2[] = { 0.3, 0.3, 0.3, 1.0 };
     GLfloat specular2[] = { 0.3, 0.3, 0.3, 1.0 };
@@ -234,7 +234,7 @@ void my_init(){
 
     GLfloat diffuse3[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat specular3[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat position3[] = { 50.0, 0.0, 30.0, 1.0 };
+    GLfloat position3[] = { 30.0, 0.0, -30.0, 1.0 };
 
     GLfloat lmodel_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
     GLfloat local_view[] = { 0.0 };
@@ -313,15 +313,16 @@ static void drag_scene(int x, int y){
 static void draw_scene(){
     glTranslatef( object_translate.x, object_translate.y, object_translate.z );
     arcball_rotate();
+
     re_place_light_source();
 
     // draw ground
     set_colour (0.2,0.2,0.2);
     glBegin(GL_QUADS);
-    glVertex3f(-100, -2, 100);
-    glVertex3f(100, -2, 100);
-    glVertex3f(100, -2, -100);
-    glVertex3f(-100, -2, -100);
+    glVertex3f(-100, -.6, 100);
+    glVertex3f(100, -.6, 100);
+    glVertex3f(100, -.6, -100);
+    glVertex3f(-100, -.6, -100);
     glEnd();
 
     // draw mesh
@@ -347,6 +348,7 @@ static void draw_scene(){
         }
         starting_element = next_time_starting_element;
     }
+
 
     // draw ball
     if (ball_list.size()!=0) {
