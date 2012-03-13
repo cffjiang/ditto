@@ -60,6 +60,46 @@ public:
         return (P-P_hat).Magnitude();
     }
 
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function: find_closest_points_seg_seg
+    // This function takes care of degeneracy cases
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    T find_closest_points_seg_seg(Segment_3d &him, Point &P, Point &Q, T &s, T &t) { //P = (1-s)A + sB, Q = (1-t)C + tD, C = him.A, D = him.B
+        Point C = him.A;
+        Point D = him.B;
+        Vec vBA = B - A;
+        Vec vDC = D - C;
+        Vec vCA = C - A;
+        Vec cross = vBA.Cross_Product(vDC);
+        T area_square = cross.Dot(cross);
+        T tol = 1e-10;
+
+        if (area_square > tol) { // two segments are not parallel
+            ditto::algebra::MATRIX_2X2<T> M(vDC.Dot(vBA), vDC.Dot(vDC), -(vBA.Dot(vBA)), -(vBA.Dot(vDC)));
+            M.Invert();
+            ditto::algebra::VECTOR_2D<T> rhs(-(vCA.Dot(vBA)), -(vCA.Dot(vDC)));
+            ditto::algebra::VECTOR_2D<T> ts = M*rhs;
+
+            t = ts(0);
+            s = ts(1);
+
+            if (t < 0) t = 0;
+            else if (t > 1) t = 1;
+
+            if (s < 0) s = 0;
+            else if (s > 1) s = 1;
+
+            P = A*(1-s) + B*s;
+            Q = C*(1-t) + D*t;
+        } else { // AB || CD
+            // TODO
+
+        }
+        
+        return (P-Q).Magnitude();
+
+    }
+
 };
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
