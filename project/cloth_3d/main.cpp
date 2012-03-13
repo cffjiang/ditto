@@ -15,13 +15,6 @@
 #include <ditto/public_library/geometry/triangle_mesh_3d.h>
 #include <ditto/public_library/cloth_3d/neo_hookean_cloth_3d_fvm_explicit.h>
 
-double diffclock(clock_t clock1,clock_t clock2)
-{
-    double diffticks=clock1-clock2;
-    double diffms=(diffticks*10)/CLOCKS_PER_SEC;
-    return diffms;
-}
-
 int main(int argc, char ** argv)
 {
 #ifdef _OPENMP
@@ -46,7 +39,7 @@ int main(int argc, char ** argv)
         use_gravity = true;
         ballv = 2;
         ball_spring_constant = 1e4;
-        int num_of_clothes = 3;
+        int num_of_clothes = 5;
         ditto::geometry::Triangle_Mesh_3d<T> tm;
 
         tm.initialize_parellel_clothes(num_of_clothes ,11,11, -0.5,0.5, -0.5, 0.5,-0.3,0.3, rho);
@@ -56,9 +49,9 @@ int main(int argc, char ** argv)
         cloth.aware_of_num_of_clothes(num_of_clothes);
         cloth.set_dirichlet_with_a_bounding_box(-100,100, 0.4, 0.6, -100, 100, 0.0, 0.0, 0.0);
         frame = 1;
-        clock_t very_begin=clock();
+        double very_begin= omp_get_wtime();
         while (1) {
-            clock_t begin=clock();
+            double begin= omp_get_wtime();
     
             std::cout << "--- Frame " << frame <<"  -------------------------------------" << std::endl;
             std::cout << "  simulating time: " << (frame-1)*dt <<  "\n";
@@ -73,10 +66,12 @@ int main(int argc, char ** argv)
 
             if (frame > last_frame) break;
 
-            clock_t end = std::clock();
-            double cost = double(diffclock(end, begin))/1000.0;
-            double average_cost = double(diffclock(end, very_begin))/(frame*1000.0);
+            double end = omp_get_wtime();
+            double cost = end - begin;
+            double time_passed = end - very_begin;
+            double average_cost = time_passed/frame;
             std::cout << "  Time cost for this frame: " << cost << " s"<< std::endl;
+            std::cout << "  Time passed in total: " << time_passed << " s" << std::endl;
             std::cout << "  Average time cost for each frame: " << average_cost << " s" << std::endl;
             std::cout << "  To finish " << last_frame << " frames, still need " << average_cost*(last_frame-frame)/60.0 << " minutes.\n" << std::endl;
 
