@@ -1,0 +1,14 @@
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// ditto/public_library/data_structures/kd_tree.h
+// Copyright 2012, Chenfanfu Jiang
+//
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+#ifndef KD_TREE_H
+#define KD_TREE_H
+
+
+
+
+
+#endif
