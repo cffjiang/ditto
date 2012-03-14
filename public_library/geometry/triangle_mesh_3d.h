@@ -62,6 +62,8 @@ public:
 
     void initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1);
 
+    void add_cloth_to_existing_mesh(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1);
+
     void initialize_parellel_clothes(const int num_clothes, const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_zmin, const T input_zmax, const T input_rho = 1);
 };
 
@@ -146,6 +148,16 @@ initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xm
         std::cout << "\nedge: " << edges[i](0) << " " << edges[i](1) << std::endl;
     }
     */    
+
+}
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: add_cloth_to_existing_mesh
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T>
+void Triangle_Mesh_3d<T>::
+add_cloth_to_existing_mesh(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho)
+{
 
 }
 
