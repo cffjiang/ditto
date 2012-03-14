@@ -18,7 +18,7 @@
 int main(int argc, char ** argv)
 {
 #ifdef _OPENMP
-    omp_set_num_threads(8);
+    omp_set_num_threads(4);
 #endif
 
     typedef double T;
