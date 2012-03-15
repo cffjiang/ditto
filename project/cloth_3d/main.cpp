@@ -42,7 +42,7 @@ int main(int argc, char ** argv)
         int num_of_clothes = 5;
         ditto::geometry::Triangle_Mesh_3d<T> tm;
 
-        tm.initialize_parellel_clothes(num_of_clothes ,21,21, -0.5,0.5, -0.5, 0.5,-0.3,0.3, rho);
+        tm.initialize_parellel_clothes(num_of_clothes ,11,11, -0.5,0.5, -0.5, 0.5,-0.3,0.3, rho);
         // tm.initialize_regular_mesh(11,11, -0.5,0.5, -0.5, 0.5, rho);
 
         ditto::cloth_3d::Neo_Hookean_Cloth_3d_Fvm_Explicit<T, ditto::geometry::Triangle_Mesh_3d<T> > cloth(tm, dt, E, 0.3, 0.001, use_gravity);

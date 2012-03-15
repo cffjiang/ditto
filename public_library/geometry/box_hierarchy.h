@@ -38,6 +38,39 @@ public:
     Box_Hierarchy() { }
 
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function: query_box
+    // This function returns a list of indices.
+    // They are indices of potential triangles that may intersect the input box
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    template<typename InputBoxType, typename IndexListType>
+    bool query_box(InputBoxType &B, IndexListType &intersection_list)
+    {
+        intersection_list.clear();
+        int tree_root = boxes.size() - 1;
+        query_box_recurser(tree_root, B, intersection_list);
+        return (intersection_list.size() != 0);
+    }
+
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function: query_box_recurser
+    // A recursive helper function for query_box. 
+    // Recursively build intersection list.
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    template<typename InputBoxType, typename IndexListType>
+    void query_box_recurser(const int me, InputBoxType &B, IndexListType &intersection_list)
+    {
+        bool I_intersect_the_box = boxes[me].test_intersection_with_another_box(B);
+
+        if (I_intersect_the_box) {
+            if (me < num_leafs) { // I am a leaf
+                intersection_list.push_back(me); }
+            else {
+                int how_many_children = childrens[me].size();
+                for (int c=0; c<how_many_children; c++) {
+                    query_box_recurser(childrens[me][c], B, intersection_list); } } }
+    }
+
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     // Function: query_point
     // This function returns a list of indices.
     // They are indices of potential triangles that may intersect the input point

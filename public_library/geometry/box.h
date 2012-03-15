@@ -49,7 +49,7 @@ public:
     }
 
     template<class SegmentType>
-    void build_box_from_segment(const int input_id, const SegmentType &seg, const T margin)
+    void build_box_from_segment(const int input_id, SegmentType &seg, const T margin)
     {
         id = input_id;
 
@@ -98,7 +98,8 @@ public:
         return true;
     }
 
-    bool test_intersection_with_another_box(Box<T,PointType> &B)
+    template<class TestBoxType>
+    bool test_intersection_with_another_box(TestBoxType &B)
     {
         if (Pmin(0) > B.Pmax(0) || Pmax(0) < B.Pmin(0) ||
             Pmin(1) > B.Pmax(1) || Pmax(1) < B.Pmin(1) ||

@@ -19,6 +19,7 @@
 
 #include <ditto/public_library/geometry/simplex.h>
 #include <ditto/public_library/geometry/box_hierarchy.h>
+#include <ditto/public_library/geometry/box.h>
 #include <ditto/public_library/algebra/linear_algebra.h>
 #include <ditto/public_library/algebra/Eigen3/Eigen/Dense>
 #include <ditto/public_library/algebra/Eigen3/Eigen/SVD>
@@ -278,8 +279,8 @@ update_one_step() {
     // modify v with self collision impulse
     if (use_self_collision) {
         update_hierarchy();
-        do_point_triangle_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); }
-        // do_segment_segment_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); }
+        do_point_triangle_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance);
+        do_segment_segment_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); }
 
     // update x
 #pragma omp parallel for schedule(static)
@@ -437,7 +438,7 @@ template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
 do_segment_segment_repulsion(int iterations, T d_tol) {
     for (int iter_count = 0; iter_count < iterations; iter_count++) {
-#pragma omp parallel for schedule(static)        
+
         for (unsigned int first_edge_index = 0; first_edge_index < mesh.edges.size(); first_edge_index++) {
             int node_A = mesh.edges[first_edge_index](0);
             int node_B = mesh.edges[first_edge_index](1);
@@ -446,47 +447,64 @@ do_segment_segment_repulsion(int iterations, T d_tol) {
             node_3d_type A = x[node_A];
             node_3d_type B = x[node_B];
             ditto::geometry::Segment_3d<T> edgeAB(A, B);
-            for (unsigned int second_edge_index = 0; second_edge_index < mesh.edges.size(); second_edge_index++) {
-                int node_C = mesh.edges[second_edge_index](0);
-                int node_D = mesh.edges[second_edge_index](1);
-                if (node_C == node_A || node_C == node_B || node_D == node_A || node_D == node_B) { // don't need to check edge pair that share node
-                    continue; }
-                
-                node_3d_type C = x[node_C];
-                node_3d_type D = x[node_D];
-                ditto::geometry::Segment_3d<T> edgeCD(C, D);
+            
+            ditto::geometry::Box<T,node_3d_type> first_edge_box;
+            first_edge_box.build_box_from_segment(first_edge_index, edgeAB, hierarchy.margin);
+            std::vector<int> intersection_list;
+            hierarchy.query_box(first_edge_box, intersection_list);
 
-                // a naive bounding box
-                T ABminx, ABmaxx, ABminy, ABmaxy, ABminz, ABmaxz;
-                T CDminx, CDmaxx, CDminy, CDmaxy, CDminz, CDmaxz;
-                edgeAB.get_box(d_tol, ABminx, ABmaxx, ABminy, ABmaxy, ABminz, ABmaxz);
-                edgeCD.get_box(d_tol, CDminx, CDmaxx, CDminy, CDmaxy, CDminz, CDmaxz);
-                if (ABminx > CDmaxx || ABmaxx < CDminx || ABminy > CDmaxy || ABmaxy < CDminy || ABminz > CDmaxz || ABmaxz < CDminz) {
-                    continue;}
+            // for (unsigned int second_edge_index = 0; second_edge_index < mesh.edges.size(); second_edge_index++) {
+            //     int node_C = mesh.edges[second_edge_index](0);
+            //     int node_D = mesh.edges[second_edge_index](1);
 
-                node_3d_type P;
-                node_3d_type Q;
-                T s,t;
-                T d = edgeAB.find_closest_points_seg_seg(edgeCD, P, Q, s, t);
-                if (d < d_tol) {
-                    T ksiA = 1-s;
-                    T ksiB = s;
-                    T ksiC = 1-t;
-                    T ksiD = t;
-                    node_3d_type n = (P-Q)*(1.0/d);
-                    node_3d_type vP = v[node_A]*ksiA + v[node_B]*ksiB;
-                    node_3d_type vQ = v[node_C]*ksiC + v[node_D]*ksiD;
-                    node_3d_type v_rel = vP - vQ;
-                    T v_rel_dot_n = v_rel.Dot(n);
-                    if (v_rel_dot_n < 0) {
-                        T mC = mesh.mass[node_C];
-                        T mD = mesh.mass[node_D];
-                        T impulse = -v_rel_dot_n / ( ksiA*ksiA/mA  +  ksiB*ksiB/mB  +  ksiC*ksiC/mC  +  ksiD*ksiD/mD );
-
-                        v[node_A] = v[node_A] + n*(ksiA*impulse/mA);
-                        v[node_B] = v[node_B] + n*(ksiB*impulse/mB);
-                        v[node_C] = v[node_C] - n*(ksiC*impulse/mC);
-                        v[node_D] = v[node_D] - n*(ksiD*impulse/mD); }}}}}
+            for (unsigned int iliter = 0; iliter < intersection_list.size(); iliter++) {
+                int t = intersection_list[iliter];
+                int node0 = mesh.elements[t](0);
+                int node1 = mesh.elements[t](1);
+                int node2 = mesh.elements[t](2);
+                int edges_of_triangle[][2] = { {node0, node1}, {node1, node2}, {node2, node0} };
+                for (unsigned int edgeIter = 0; edgeIter < 3; edgeIter++) {
+                    int node_C = edges_of_triangle[edgeIter][0];
+                    int node_D = edges_of_triangle[edgeIter][1];
+                    
+                    if (node_C == node_A || node_C == node_B || node_D == node_A || node_D == node_B) { // don't need to check edge pair that share node
+                        continue; }
+                    
+                    node_3d_type C = x[node_C];
+                    node_3d_type D = x[node_D];
+                    ditto::geometry::Segment_3d<T> edgeCD(C, D);
+                    
+                    // a naive bounding box
+                    // T ABminx, ABmaxx, ABminy, ABmaxy, ABminz, ABmaxz;
+                    // T CDminx, CDmaxx, CDminy, CDmaxy, CDminz, CDmaxz;
+                    // edgeAB.get_box(d_tol, ABminx, ABmaxx, ABminy, ABmaxy, ABminz, ABmaxz);
+                    // edgeCD.get_box(d_tol, CDminx, CDmaxx, CDminy, CDmaxy, CDminz, CDmaxz);
+                    // if (ABminx > CDmaxx || ABmaxx < CDminx || ABminy > CDmaxy || ABmaxy < CDminy || ABminz > CDmaxz || ABmaxz < CDminz) {
+                    //     continue;}
+                    
+                    node_3d_type P;
+                    node_3d_type Q;
+                    T s,t;
+                    T d = edgeAB.find_closest_points_seg_seg(edgeCD, P, Q, s, t);
+                    if (d < d_tol) {
+                        T ksiA = 1-s;
+                        T ksiB = s;
+                        T ksiC = 1-t;
+                        T ksiD = t;
+                        node_3d_type n = (P-Q)*(1.0/d);
+                        node_3d_type vP = v[node_A]*ksiA + v[node_B]*ksiB;
+                        node_3d_type vQ = v[node_C]*ksiC + v[node_D]*ksiD;
+                        node_3d_type v_rel = vP - vQ;
+                        T v_rel_dot_n = v_rel.Dot(n);
+                        if (v_rel_dot_n < 0) {
+                            T mC = mesh.mass[node_C];
+                            T mD = mesh.mass[node_D];
+                            T impulse = -v_rel_dot_n / ( ksiA*ksiA/mA  +  ksiB*ksiB/mB  +  ksiC*ksiC/mC  +  ksiD*ksiD/mD );
+                            
+                            v[node_A] = v[node_A] + n*(ksiA*impulse/mA);
+                            v[node_B] = v[node_B] + n*(ksiB*impulse/mB);
+                            v[node_C] = v[node_C] - n*(ksiC*impulse/mC);
+                            v[node_D] = v[node_D] - n*(ksiD*impulse/mD); }}}}}}
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
