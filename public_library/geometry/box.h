@@ -48,6 +48,29 @@ public:
         Pmax(2) = z_max + margin;
     }
 
+    template<class SegmentType>
+    void build_box_from_segment(const int input_id, const SegmentType &seg, const T margin)
+    {
+        id = input_id;
+
+        T x_min = 10000, x_max = -10000, y_min = 10000, y_max = -10000, z_min = 10000, z_max = -10000;
+        for (int p=0; p<2; p++) {
+            if (seg(p)(0) < x_min) x_min = seg(p)(0);
+            if (seg(p)(0) > x_max) x_max = seg(p)(0);
+            if (seg(p)(1) < y_min) y_min = seg(p)(1);
+            if (seg(p)(1) > y_max) y_max = seg(p)(1);
+            if (seg(p)(2) < z_min) z_min = seg(p)(2);
+            if (seg(p)(2) > z_max) z_max = seg(p)(2); }
+
+        Pmin(0) = x_min - margin;
+        Pmin(1) = y_min - margin;
+        Pmin(2) = z_min - margin;
+
+        Pmax(0) = x_max + margin;
+        Pmax(1) = y_max + margin;
+        Pmax(2) = z_max + margin;
+    }
+
     void build_union_box(const int input_id, Box<T,PointType> &A, Box<T,PointType> &B)
     {
         id = input_id;
@@ -71,6 +94,15 @@ public:
     bool test_point_inside_box(TestPointType &P)
     {
         if ( P(0) > Pmax(0) || P(0) < Pmin(0) || P(1) > Pmax(1) || P(1) < Pmin(1) || P(2) > Pmax(2) || P(2) < Pmin(2) ) {
+            return false; }
+        return true;
+    }
+
+    bool test_intersection_with_another_box(Box<T,PointType> &B)
+    {
+        if (Pmin(0) > B.Pmax(0) || Pmax(0) < B.Pmin(0) ||
+            Pmin(1) > B.Pmax(1) || Pmax(1) < B.Pmin(1) ||
+            Pmin(2) > B.Pmax(2) || Pmax(2) < B.Pmin(2) ) {
             return false; }
         return true;
     }

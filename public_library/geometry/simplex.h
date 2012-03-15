@@ -13,6 +13,7 @@
 
 #include <cmath>
 #include <vector>
+#include <cassert>
 #include <algorithm>
 #include <ditto/public_library/algebra/linear_algebra.h>
 
@@ -33,6 +34,11 @@ public:
         for (int i=0; i<3; i++) {
             A(i) = iA(i);
             B(i) = iB(i); } }
+
+    Point& operator()(const int i) {
+        assert(i == 0 || i == 1);
+        if (i == 0) return A;
+        else if (i == 1) return B; }
 
     T get_length() {
         Vec AmB = A-B;
