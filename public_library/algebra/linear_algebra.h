@@ -334,7 +334,7 @@ public:
     
     T& x() {return v1;} 
     T& y() {return v2;}
-	T& z() {return v3;}
+    T& z() {return v3;}
     const T& x() const {return v1;} 
     const T& y() const {return v2;}
     const T& z() const {return v3;}
