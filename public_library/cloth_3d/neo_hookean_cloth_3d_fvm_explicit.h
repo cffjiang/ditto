@@ -18,6 +18,7 @@
 #include <ctime>
 
 #include <ditto/public_library/geometry/simplex.h>
+#include <ditto/public_library/geometry/box_hierarchy.h>
 #include <ditto/public_library/algebra/linear_algebra.h>
 #include <ditto/public_library/algebra/Eigen3/Eigen/Dense>
 #include <ditto/public_library/algebra/Eigen3/Eigen/SVD>
@@ -44,6 +45,7 @@ public:
     typedef ditto::algebra::MATRIX_2X2<T> matrix_2x2_type;
     typedef ditto::algebra::MATRIX_3X3<T> matrix_3x3_type;
     typedef typename std::vector<matrix_2x2_type> matrix_2x2_list_type;
+    typedef ditto::geometry::Box_Hierarchy<T> triangle_hierarchy_type;
 
     MeshType &mesh;
     T dt;
@@ -60,6 +62,8 @@ public:
     bool use_self_collision;
     int self_collision_repulsion_iters;
     T self_collision_distance_tolerance;
+
+    triangle_hierarchy_type hierarchy;
 
     node_3d_type ball_center;
     T ball_radius;
@@ -116,6 +120,10 @@ public:
     void do_point_triangle_repulsion(int iterations, T d_tol);
 
     void do_segment_segment_repulsion(int iterations, T d_tol);
+
+    void initialize_hierarchy(T margin);
+
+    void update_hierarchy();
 
     void switch_self_collision(bool s, int input_iter, T input_dtol);
 
@@ -269,8 +277,9 @@ update_one_step() {
     
     // modify v with self collision impulse
     if (use_self_collision) {
-      do_point_triangle_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); 
-      do_segment_segment_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); }
+        update_hierarchy();
+        do_point_triangle_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); }
+        // do_segment_segment_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); }
 
     // update x
 #pragma omp parallel for schedule(static)
@@ -326,7 +335,7 @@ add_ground_collision(T ground_level, T spring_constant, T friction_constant)
             node_3d_type push_normal(0, 1, 0);
             f[i] = f[i] + push_normal*penetration_depth*spring_constant; 
             
-             // friction
+            // friction
             node_3d_type friction_normal = v[i]*(-1.0);
             friction_normal(1) = 0.0;
             friction_normal.Normalize();
@@ -368,11 +377,17 @@ void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
 do_point_triangle_repulsion(int iterations, T d_tol) {
     for (int iter_count = 0; iter_count < iterations; iter_count++) {
 
-#pragma omp parallel for schedule(static)
         for (unsigned int p = 0; p < mesh.nodes.size(); p++) {
             node_3d_type P = x[p];
             T mp = mesh.mass[p];
-            for (unsigned int t = 0; t < mesh.elements.size(); t++) {
+
+            // query hierarchy to get potential intersection pairs
+            std::vector<int> intersection_list;
+            hierarchy.query_point(P, intersection_list);
+            
+            for (unsigned int iliter = 0; iliter < intersection_list.size(); iliter++) {
+                int t = intersection_list[iliter];
+
                 int node0 = mesh.elements[t](0);
                 int node1 = mesh.elements[t](1);
                 int node2 = mesh.elements[t](2);
@@ -475,7 +490,7 @@ do_segment_segment_repulsion(int iterations, T d_tol) {
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-// Function: write_output
+// Function: switch_self_collision
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
@@ -483,6 +498,27 @@ switch_self_collision(bool s, int input_iter, T input_dtol) {
     use_self_collision = s;
     self_collision_repulsion_iters = input_iter;
     self_collision_distance_tolerance = input_dtol;
+
+    if (use_self_collision == true) {
+        initialize_hierarchy(input_dtol); }
+}
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: initialize_hierarchy
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+initialize_hierarchy(T margin) {
+    hierarchy.build_tree(mesh.elements, x, margin);
+}
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: update_hierarchy
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+update_hierarchy() {
+    hierarchy.update_box_positions(mesh.elements, x);
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*

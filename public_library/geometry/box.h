@@ -32,12 +32,12 @@ public:
 
         T x_min = 10000, x_max = -10000, y_min = 10000, y_max = -10000, z_min = 10000, z_max = -10000;
         for (int p=0; p<3; p++) {
-            if (tri[p](0) < x_min) x_min = tri[p](0);
-            if (tri[p](0) > x_max) x_max = tri[p](0);
-            if (tri[p](1) < y_min) y_min = tri[p](1);
-            if (tri[p](1) > y_max) y_max = tri[p](1);
-            if (tri[p](2) < z_min) z_min = tri[p](2);
-            if (tri[p](2) > z_max) z_max = tri[p](2); }
+            if (tri(p)(0) < x_min) x_min = tri(p)(0);
+            if (tri(p)(0) > x_max) x_max = tri(p)(0);
+            if (tri(p)(1) < y_min) y_min = tri(p)(1);
+            if (tri(p)(1) > y_max) y_max = tri(p)(1);
+            if (tri(p)(2) < z_min) z_min = tri(p)(2);
+            if (tri(p)(2) > z_max) z_max = tri(p)(2); }
 
         Pmin(0) = x_min - margin;
         Pmin(1) = y_min - margin;

@@ -22,6 +22,7 @@ class Box_Hierarchy {
 
 public:
     typedef ditto::algebra::VECTOR_3D<T> PointType;
+    typedef ditto::algebra::VECTOR_3D<PointType> TriangleType; 
     typedef ditto::geometry::Box<T,PointType> BoxType; 
     typedef std::vector<BoxType> BoxListType;
     typedef int ChildType;
@@ -30,19 +31,57 @@ public:
     
     BoxListType boxes;
     ChildrenListType childrens;
+    int num_leafs;
+    int num_boxes;
+    T margin;
     
     Box_Hierarchy() { }
 
-    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function: query_point
+    // This function returns a list of indices.
+    // They are indices of potential triangles that may intersect the input point
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    template<typename InputPointType, typename IndexListType>
+    bool query_point(const InputPointType &P, IndexListType &intersection_list)
+    {
+        intersection_list.clear();
+        int tree_root = boxes.size() - 1;
+        query_point_recurser(tree_root, P, intersection_list);
+        return (intersection_list.size() != 0);
+    }
+
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function: query_point_recurser
+    // A recursive helper function for query_point. 
+    // Recursively build intersection list.
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    template<typename InputPointType, typename IndexListType>
+    void query_point_recurser(const int me, const InputPointType &P, IndexListType &intersection_list)
+    {
+        bool I_have_the_point = boxes[me].test_point_inside_box(P);
+        
+        if (I_have_the_point) {
+            if (me < num_leafs) { // I am a leaf
+                intersection_list.push_back(me); }
+            else {
+                int how_many_children = childrens[me].size();
+                for (int c=0; c<how_many_children; c++) {
+                    query_point_recurser(childrens[me][c], P, intersection_list); } } }
+    }
+
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     // Function: build_tree
     // Buiding (and storing) the tree bottom up.
-    // This function is only called once as initialization.
-    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // This function is only called once as initialization. Tested.
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     template<typename TriangleListType, typename VertexPositionListType>
-    void build_tree(TriangleListType &elements, VertexPositionListType &vertices)
+    void build_tree(TriangleListType &elements, VertexPositionListType &vertices, T input_margin)
     {
-        int num_leafs = elements.size();
-        int num_boxes = boxes.size();
+        margin = input_margin;
+
+        num_leafs = elements.size();
+        num_boxes = boxes.size();
 
         assert(num_boxes == 0);
 
@@ -61,12 +100,33 @@ public:
 
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     // Function: update_box_positions
-    // This function is usually called in each time step
+    // This function is usually called in each time step. Tested.
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-    template<typename TriangleListType, typename VertexPositionListType>
-    void update_box_positions(TriangleListType &elements, VertexPositionListType &vertices)
+    template<typename ElementListType, typename VertexPositionListType>
+    void update_box_positions(ElementListType &elements, VertexPositionListType &vertices)
     {
-        //TODO
+        TriangleType tri;
+
+        // build leaf boxes. can parallel.
+        for (int i=0; i<num_leafs; i++) {
+            tri(0) = vertices[elements[i](0)]; 
+            tri(1) = vertices[elements[i](1)]; 
+            tri(2) = vertices[elements[i](2)]; 
+            boxes[i].build_box(i, tri, margin); }
+
+        // build other levels by union boxes. can't parallel.
+        for (int i=num_leafs; i<num_boxes; i++) {
+            int children_size = childrens[i].size();
+            if (children_size == 2) {
+                int first_child = childrens[i][0];
+                int second_child = childrens[i][1];
+                boxes[i].build_union_box(i, boxes[first_child], boxes[second_child]); }
+            else if (children_size == 3) {
+                int first_child = childrens[i][0];
+                int second_child = childrens[i][1];
+                int third_child = childrens[i][2];
+                boxes[i].build_union_box(i, boxes[first_child], boxes[second_child], boxes[third_child]); }
+        }
     }
 
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
