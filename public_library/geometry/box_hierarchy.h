@@ -168,7 +168,7 @@ public:
     // The boxes will cover both vertices in time n and predict those in time n+1
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     template<typename ElementListType, typename VertexPositionListType, typename VertexVelocityListType>
-    void update_box_positions_predicting_future(ElementListType &elements, VertexPositionListType &vertices, VertexVeloctyListType &velocities, T dt)
+    void update_box_positions_predicting_future(ElementListType &elements, VertexPositionListType &vertices, VertexVelocityListType &velocities, T dt)
     {
         TriangleType tri;
         TriangleType tri_future;

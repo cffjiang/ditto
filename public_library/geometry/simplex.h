@@ -16,6 +16,9 @@
 #include <cassert>
 #include <algorithm>
 #include <ditto/public_library/algebra/linear_algebra.h>
+#include <ditto/public_library/algebra/cubic_equation_solve.h>
+#include <ditto/public_library/algebra/Eigen3/Eigen/LU>
+#include <ditto/public_library/algebra/Eigen3/Eigen/Dense>
 
 namespace ditto { namespace geometry {
 
@@ -277,6 +280,28 @@ public:
         for (int i=0; i<3; i++) n(i) = normal(i); }
 
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function: contain_point
+    // This function only tests for point in the same plane
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    template<class InputPointType>
+    bool contain_point(InputPointType &P)
+    {
+        Vec BmA = B - A;
+        Vec CmA = C - A;
+        Vec PmA = P - A;
+        ditto::algebra::MATRIX_2X2<T> M(BmA.Dot(BmA), CmA.Dot(BmA), CmA.Dot(BmA), CmA.Dot(CmA));
+        M.Invert();
+        ditto::algebra::VECTOR_2D<T> rhs(PmA.Dot(BmA), PmA.Dot(CmA));
+        ditto::algebra::VECTOR_2D<T> ksi = M*rhs;
+
+        T ksi1 = ksi(0);
+        T ksi2 = ksi(1);
+        
+        if (ksi1 < 0 || ksi1 > 1 || ksi2 < 0 || ksi2 > 1 || 1-ksi1-ksi2 < 0 || 1-ksi1-ksi2 > 1) return false;
+        else return true;
+    }
+
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     // Function: find_closest_point
     // Before calling this function, should make sure area > tol
     // in order to avoid divide-by-zero problem.
@@ -366,7 +391,7 @@ public:
     Point D;
 
     template<class InputPointType>
-    Tetrahedron(InputPointType &iA, InputPontType &iB, InputPointType &iC, InputPointType &iD)
+    Tetrahedron(InputPointType &iA, InputPointType &iB, InputPointType &iC, InputPointType &iD)
     {
         A = iA; B = iB; C = iC; D = iD;
     }
@@ -376,11 +401,91 @@ public:
     // This function is non-trivial.
     // It tests whether at some time between 0 and dt, D penetrates triangle ABC.
     // (Assuming every point moves along current velocity.)
+    // True means safe, false means there will be penetration.
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     template<class InputVelocityType>
     bool penetration_safety_test(InputVelocityType &vA, InputVelocityType &vB, InputVelocityType &vC, InputVelocityType &vD, T dt)
     {
-        // TODO
+        typedef ditto::algebra::VECTOR_2D<T> ComplexNumber;
+        Eigen::Matrix4f M;
+
+        M << 1, 1, 1, 1,
+            A(0), B(0), C(0), D(0),
+            A(1), B(1), C(1), D(1),
+            A(2), B(2), C(2), D(2);
+        T V0 = M.determinant()/6;
+
+        M << 1, 1, 1, 1,
+            A(0)+vA(0)*dt, B(0)+vB(0)*dt, C(0)+vC(0)*dt, D(0)+vD(0)*dt,
+            A(1)+vA(1)*dt, B(1)+vB(1)*dt, C(1)+vC(1)*dt, D(1)+vD(1)*dt,
+            A(2)+vA(2)*dt, B(2)+vB(2)*dt, C(2)+vC(2)*dt, D(2)+vD(2)*dt;
+        T V1 = M.determinant()/6;
+
+        M << 1, 1, 1, 1,
+            A(0)-vA(0)*dt, B(0)-vB(0)*dt, C(0)-vC(0)*dt, D(0)-vD(0)*dt,
+            A(1)-vA(1)*dt, B(1)-vB(1)*dt, C(1)-vC(1)*dt, D(1)-vD(1)*dt,
+            A(2)-vA(2)*dt, B(2)-vB(2)*dt, C(2)-vC(2)*dt, D(2)-vD(2)*dt;
+        T Vm1 = M.determinant()/6;
+
+        M << 1, 1, 1, 1,
+            A(0)+vA(0)*dt*2, B(0)+vB(0)*dt*2, C(0)+vC(0)*dt*2, D(0)+vD(0)*dt*2,
+            A(1)+vA(1)*dt*2, B(1)+vB(1)*dt*2, C(1)+vC(1)*dt*2, D(1)+vD(1)*dt*2,
+            A(2)+vA(2)*dt*2, B(2)+vB(2)*dt*2, C(2)+vC(2)*dt*2, D(2)+vD(2)*dt*2;
+        T V2 = M.determinant()/6;
+
+        M << 1, 1, 1, 1,
+            A(0)-vA(0)*dt*2, B(0)-vB(0)*dt*2, C(0)-vC(0)*dt*2, D(0)-vD(0)*dt*2,
+            A(1)-vA(1)*dt*2, B(1)-vB(1)*dt*2, C(1)-vC(1)*dt*2, D(1)-vD(1)*dt*2,
+            A(2)-vA(2)*dt*2, B(2)-vB(2)*dt*2, C(2)-vC(2)*dt*2, D(2)-vD(2)*dt*2;
+        T Vm2 = M.determinant()/6;
+        
+        T d = V0;
+        T b = 0.5 * (V1 + Vm1 - 2*d);
+        T a = (V2 - Vm2 - 2*V1 + 2*Vm1) / 12;
+        T c = 0.5 * (V1 - Vm1 - 2*a);
+
+        ComplexNumber root1, root2, root3;
+        int root_nature = ditto::algebra::cubic_equation_solve(a, b, c, d, root1, root2, root3);
+
+        T t,t1,t2,t3;
+        if (root_nature == 1)
+        {
+                t = root1(0);
+                if (t > 1 || t < 0) return true;
+                ditto::geometry::Triangle_3d<T> key_tri(A+vA*t*dt, B+vB*t*dt, C+vC*t*dt);
+                ditto::algebra::VECTOR_3D<T> key_point = D+vD*t+dt;
+                if (key_tri.contain_point(key_point)) return false;
+                else return true;
+        }
+        else if (root_nature == 2)
+        {
+                t1 = root1(0);
+                t2 = root2(0);
+                t3 = root3(0);
+                if (t1 > 0 && t1 < 1) {
+                    Triangle_3d<T> key_tri1(A+vA*t1*dt, B+vB*t1*dt, C+vC*t1*dt);
+                    ditto::algebra::VECTOR_3D<T> key_point1 = D+vD*t1*dt;
+                    if (key_tri1.contain_point(key_point1)) return false; }
+                if (t2 > 0 && t2 < 1) {
+                    Triangle_3d<T> key_tri2(A+vA*t2*dt, B+vB*t2*dt, C+vC*t2*dt);
+                    ditto::algebra::VECTOR_3D<T> key_point2 = D+vD*t2*dt;
+                    if (key_tri2.contain_point(key_point2)) return false; }
+                if (t3 > 0 && t3 < 1) {
+                    Triangle_3d<T> key_tri3(A+vA*t3*dt, B+vB*t3*dt, C+vC*t3*dt);
+                    ditto::algebra::VECTOR_3D<T> key_point3 = D+vD*t3*dt;
+                    if (key_tri3.contain_point(key_point3)) return false; }
+                return true;
+        }
+        else if (root_nature == 3)
+        {
+                t = root1(0);
+                if (t > 1 || t < 0) return true;
+                Triangle_3d<T> key_tri0(A+vA*t*dt, B+vB*t*dt, C+vC*t*dt);
+                ditto::algebra::VECTOR_3D<T> key_point0 = D+vD*t*dt;
+                if (key_tri0.contain_point(key_point0)) return false;
+                else return true;
+        }
+
     }
 
 

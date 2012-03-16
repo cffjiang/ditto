@@ -112,7 +112,7 @@ public:
 
     void update_one_step();
 
-    void add_gravity();
+    void add_gravity(T gx, T gy, T gz);
 
     void set_dirichlet_with_a_bounding_box(T x0, T xM, T y0, T yM, T z0, T zM, T xmove, T ymove, T zmove);
 
@@ -288,7 +288,6 @@ update_one_step() {
         do_segment_segment_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); 
 
         do_point_triangle_collision(self_collision_collision_iters);
-
     }
 
     // update x
@@ -358,8 +357,8 @@ add_ground_collision(T ground_level, T spring_constant, T friction_constant)
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
-add_gravity() {
-    node_3d_type g(0.0, -9.8, 0.0);
+add_gravity(T gx, T gy, T gz) {
+    node_3d_type g(gx, gy, gz);
 
 #pragma omp parallel for schedule(static)
     for (unsigned int i=0; i<mesh.nodes.size(); i++) {
@@ -549,21 +548,30 @@ do_point_triangle_collision(int iterations) {
                 node_3d_type C = x[node2];
 
                 ditto::geometry::Triangle_3d<T> tri(A, B, C);
-                if (tri_future.get_area() < 1e-10) { // if the triangle is tooooo small, ignore it
+                if (tri.get_area() < 1e-10) { // if the triangle is tooooo small, ignore it
                     continue; }
 
-                // solve for t when the tetrahedral volume becomes zero
-                // TODO
-                
+                ditto::geometry::Tetrahedron<T> tet(A, B, C, P);
+                if (tet.penetration_safety_test(v[node0], v[node1], v[node2], v[p], dt) == false) { 
+                    node_3d_type P_hat;
+                    T ksi1;
+                    T ksi2;
+                    T d = tri.find_closest_point(P, P_hat, ksi1, ksi2);
+                    node_3d_type n = (P - P_hat)*(1.0/d);
+                    node_3d_type v_hat = v[node0]*(1-ksi1-ksi2) + v[node1]*ksi1 + v[node2]*ksi2;
+                    node_3d_type v_rel = v[p] - v_hat;
+                    T v_rel_dot_n = v_rel.Dot(n);
 
+                    T m0 = mesh.mass[node0];
+                    T m1 = mesh.mass[node1];
+                    T m2 = mesh.mass[node2];
+                    T ksi0 = 1-ksi1-ksi2;
+                    T impulse = -v_rel_dot_n / (  1.0/mp +  ksi0*ksi0/m0  +  ksi1*ksi1/m1  +  ksi2*ksi2/m2  );
 
-
-            }
-        }
-    }
-
-
-                
+                    v[p] = v[p] + n*(impulse/mp);
+                    v[node0] = v[node0] - n*(ksi0*impulse/m0);
+                    v[node1] = v[node1] - n*(ksi1*impulse/m1);
+                    v[node2] = v[node2] - n*(ksi2*impulse/m2); }}}}               
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*

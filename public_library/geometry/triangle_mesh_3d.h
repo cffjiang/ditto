@@ -133,22 +133,6 @@ initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xm
         mass[node2] += rho[i]*area[i] / 3.0;; 
         mass[node3] += rho[i]*area[i] / 3.0;; 
     }
-
-    // debug code
-    /*
-    for (unsigned int i=0; i<nodes.size(); i++) {
-        std::cout << "\nnode: " << nodes[i](0) << " " << nodes[i](1) << " " << nodes[i](2) << std::endl;
-    }
-    
-    for (unsigned int i=0; i<elements.size(); i++) {
-        std::cout << "\nelement: " << elements[i](0) << " " << elements[i](1) << " " << elements[i](2) << std::endl;
-    }
-
-    for (unsigned int i=0; i<edges.size(); i++) {
-        std::cout << "\nedge: " << edges[i](0) << " " << edges[i](1) << std::endl;
-    }
-    */    
-
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -240,23 +224,9 @@ initialize_parellel_clothes(const int num_clothes, const int input_Nx, const int
         mass[node2] += rho[i]*area[i] / 3.0;; 
         mass[node3] += rho[i]*area[i] / 3.0;; 
     }
-    
-    // debug code
-    /*
-    for (unsigned int i=0; i<nodes.size(); i++) {
-        std::cout << "\nnode: " << nodes[i](0) << " " << nodes[i](1) << " " << nodes[i](2) << std::endl;
-    }
-    
-    for (unsigned int i=0; i<elements.size(); i++) {
-        std::cout << "\nelement: " << elements[i](0) << " " << elements[i](1) << " " << elements[i](2) << std::endl;
-    }
-
-    for (unsigned int i=0; i<edges.size(); i++) {
-        std::cout << "\nedge: " << edges[i](0) << " " << edges[i](1) << std::endl;
-    }
-    */
-
 }
+
+
 
 } } // end namespaces
 
