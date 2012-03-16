@@ -62,9 +62,11 @@ public:
 
     bool use_self_collision;
     int self_collision_repulsion_iters;
+    int self_collision_collision_iters;
     T self_collision_distance_tolerance;
 
     triangle_hierarchy_type hierarchy;
+    triangle_hierarchy_type hierarchy_predicting_future;
 
     node_3d_type ball_center;
     T ball_radius;
@@ -121,6 +123,8 @@ public:
     void do_point_triangle_repulsion(int iterations, T d_tol);
 
     void do_segment_segment_repulsion(int iterations, T d_tol);
+
+    void do_point_triangle_collision(int iterations);
 
     void initialize_hierarchy(T margin);
 
@@ -279,8 +283,13 @@ update_one_step() {
     // modify v with self collision impulse
     if (use_self_collision) {
         update_hierarchy();
+
         do_point_triangle_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance);
-        do_segment_segment_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); }
+        do_segment_segment_repulsion(self_collision_repulsion_iters, self_collision_distance_tolerance); 
+
+        do_point_triangle_collision(self_collision_collision_iters);
+
+    }
 
     // update x
 #pragma omp parallel for schedule(static)
@@ -508,6 +517,56 @@ do_segment_segment_repulsion(int iterations, T d_tol) {
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: do_point_triangle_collision
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+do_point_triangle_collision(int iterations) {
+    for (int iter_count = 0; iter_count < iterations; iter_count++) {
+
+        for (unsigned int p = 0; p < mesh.nodes.size(); p++) {
+            T mp = mesh.mass[p];
+            node_3d_type P = x[p]; 
+            node_3d_type P_future = x[p] + v[p]*dt;
+
+            // query hierarchy predicting future to get potential future intersection pairs
+            ditto::geometry::Segment_3d<T> PnP(P, P_future);
+            ditto::geometry::Box<T,node_3d_type> PnP_box;
+            PnP_box.build_box_from_segment(p, PnP, hierarchy_predicting_future.margin);
+            std::vector<int> intersection_list;
+            hierarchy_predicting_future.query_box(PnP_box, intersection_list);
+
+            for (unsigned int iliter = 0; iliter < intersection_list.size(); iliter++) {
+                int t = intersection_list[iliter];
+
+                int node0 = mesh.elements[t](0);
+                int node1 = mesh.elements[t](1);
+                int node2 = mesh.elements[t](2);
+                if (node0 == p || node1 == p || node2 == p) { // don't need to check element that contains node p
+                    continue; }
+                node_3d_type A = x[node0];
+                node_3d_type B = x[node1];
+                node_3d_type C = x[node2];
+
+                ditto::geometry::Triangle_3d<T> tri(A, B, C);
+                if (tri_future.get_area() < 1e-10) { // if the triangle is tooooo small, ignore it
+                    continue; }
+
+                // solve for t when the tetrahedral volume becomes zero
+                // TODO
+                
+
+
+
+            }
+        }
+    }
+
+
+                
+}
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 // Function: switch_self_collision
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 template<class T, class MeshType>
@@ -515,6 +574,7 @@ void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
 switch_self_collision(bool s, int input_iter, T input_dtol) {
     use_self_collision = s;
     self_collision_repulsion_iters = input_iter;
+    self_collision_collision_iters = input_iter;
     self_collision_distance_tolerance = input_dtol;
 
     if (use_self_collision == true) {
@@ -528,6 +588,7 @@ template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
 initialize_hierarchy(T margin) {
     hierarchy.build_tree(mesh.elements, x, margin);
+    hierarchy_predicting_future.build_tree(mesh.elements, x, margin);
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -537,6 +598,7 @@ template<class T, class MeshType>
 void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
 update_hierarchy() {
     hierarchy.update_box_positions(mesh.elements, x);
+    hierarchy_predicting_future.update_box_positions_predicting_future(mesh.elements, x, v, dt);
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*

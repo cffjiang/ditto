@@ -350,6 +350,43 @@ public:
 
 };
 
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Class: Tetrahedron
+// Orientation: ABC is counter clockwise at bottom, D is top
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T>
+class Tetrahedron {
+public:
+    typedef ditto::algebra::VECTOR_3D<T> Point;
+    typedef ditto::algebra::VECTOR_3D<T> Vec;
+
+    Point A;
+    Point B;
+    Point C;
+    Point D;
+
+    template<class InputPointType>
+    Tetrahedron(InputPointType &iA, InputPontType &iB, InputPointType &iC, InputPointType &iD)
+    {
+        A = iA; B = iB; C = iC; D = iD;
+    }
+
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function penetration_safety_test
+    // This function is non-trivial.
+    // It tests whether at some time between 0 and dt, D penetrates triangle ABC.
+    // (Assuming every point moves along current velocity.)
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    template<class InputVelocityType>
+    bool penetration_safety_test(InputVelocityType &vA, InputVelocityType &vB, InputVelocityType &vC, InputVelocityType &vD, T dt)
+    {
+        // TODO
+    }
+
+
+
+};
+
 
 } } // end namespaces
 

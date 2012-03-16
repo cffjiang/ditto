@@ -48,6 +48,37 @@ public:
         Pmax(2) = z_max + margin;
     }
 
+    template<class TriangleType>
+    void build_box(const int input_id, const TriangleType &triA, const TriangleType &triB, const T margin)
+    {
+        id = input_id;
+
+        T x_min = 10000, x_max = -10000, y_min = 10000, y_max = -10000, z_min = 10000, z_max = -10000;
+        for (int p=0; p<3; p++) {
+            if (triA(p)(0) < x_min) x_min = triA(p)(0);
+            if (triA(p)(0) > x_max) x_max = triA(p)(0);
+            if (triA(p)(1) < y_min) y_min = triA(p)(1);
+            if (triA(p)(1) > y_max) y_max = triA(p)(1);
+            if (triA(p)(2) < z_min) z_min = triA(p)(2);
+            if (triA(p)(2) > z_max) z_max = triA(p)(2); 
+            
+            if (triB(p)(0) < x_min) x_min = triB(p)(0);
+            if (triB(p)(0) > x_max) x_max = triB(p)(0);
+            if (triB(p)(1) < y_min) y_min = triB(p)(1);
+            if (triB(p)(1) > y_max) y_max = triB(p)(1);
+            if (triB(p)(2) < z_min) z_min = triB(p)(2);
+            if (triB(p)(2) > z_max) z_max = triB(p)(2); 
+        }
+
+        Pmin(0) = x_min - margin;
+        Pmin(1) = y_min - margin;
+        Pmin(2) = z_min - margin;
+
+        Pmax(0) = x_max + margin;
+        Pmax(1) = y_max + margin;
+        Pmax(2) = z_max + margin;        
+    }
+
     template<class SegmentType>
     void build_box_from_segment(const int input_id, SegmentType &seg, const T margin)
     {

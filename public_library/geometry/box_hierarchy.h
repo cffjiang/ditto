@@ -162,6 +162,45 @@ public:
         }
     }
 
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    // Function: update_box_positions_predicting_future
+    // This function is usually called in each time step.
+    // The boxes will cover both vertices in time n and predict those in time n+1
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    template<typename ElementListType, typename VertexPositionListType, typename VertexVelocityListType>
+    void update_box_positions_predicting_future(ElementListType &elements, VertexPositionListType &vertices, VertexVeloctyListType &velocities, T dt)
+    {
+        TriangleType tri;
+        TriangleType tri_future;
+
+        // build leaf boxes. can parallel.
+        for (int i=0; i<num_leafs; i++) {
+            tri(0) = vertices[elements[i](0)]; 
+            tri(1) = vertices[elements[i](1)]; 
+            tri(2) = vertices[elements[i](2)]; 
+
+            tri_future(0) = tri(0) + velocities[elements[i](0)] * dt;
+            tri_future(1) = tri(1) + velocities[elements[i](1)] * dt;
+            tri_future(2) = tri(2) + velocities[elements[i](2)] * dt;
+
+            boxes[i].build_box(i, tri, tri_future, margin); }
+
+        // build other levels by union boxes. can't parallel.
+        for (int i=num_leafs; i<num_boxes; i++) {
+            int children_size = childrens[i].size();
+            if (children_size == 2) {
+                int first_child = childrens[i][0];
+                int second_child = childrens[i][1];
+                boxes[i].build_union_box(i, boxes[first_child], boxes[second_child]); }
+            else if (children_size == 3) {
+                int first_child = childrens[i][0];
+                int second_child = childrens[i][1];
+                int third_child = childrens[i][2];
+                boxes[i].build_union_box(i, boxes[first_child], boxes[second_child], boxes[third_child]); }
+        }
+
+    }
+
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     // Function: build_hierarchy_structure_based_on_mesh_connectivity
     // This function assumes childrens has the correct size already.
