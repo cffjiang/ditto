@@ -318,11 +318,14 @@ static void draw_scene(){
 
     // draw ground
     set_colour (0.2,0.2,0.2);
+    double ground_level = -1.1;
     glBegin(GL_QUADS);
-    glVertex3f(-100, -.6, 100);
-    glVertex3f(100, -.6, 100);
-    glVertex3f(100, -.6, -100);
-    glVertex3f(-100, -.6, -100);
+
+
+    glVertex3f(-100, ground_level, 100);
+    glVertex3f(100, ground_level, 100);
+    glVertex3f(100, ground_level, -100);
+    glVertex3f(-100, ground_level, -100);
     glEnd();
 
     // draw mesh

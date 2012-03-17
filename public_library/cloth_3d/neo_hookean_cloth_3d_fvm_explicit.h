@@ -345,10 +345,10 @@ add_ground_collision(T ground_level, T spring_constant, T friction_constant)
             f[i] = f[i] + push_normal*penetration_depth*spring_constant; 
             
             // friction
-            node_3d_type friction_normal = v[i]*(-1.0);
-            friction_normal(1) = 0.0;
+            node_3d_type vxz(v[i](0), 0, v[i](2));
+            node_3d_type friction_normal = vxz*(-1.0);
             friction_normal.Normalize();
-            node_3d_type friction = friction_normal * v[i].Magnitude() * friction_constant; 
+            node_3d_type friction = friction_normal * vxz.Magnitude() * friction_constant; 
             f[i] = f[i] + friction; } }
 }
 
@@ -651,7 +651,7 @@ write_vtk(int frame) {
        // write sphere
        std::string sphere_name = "output/sphere"+ss.str()+".vtk";
        if (use_ball_collision) {
-           ditto::visualization::write_vtk_sphere(ball_center(0), ball_center(1), ball_center(2), ball_radius*0.8, sphere_name);
+           ditto::visualization::write_vtk_sphere(ball_center(0), ball_center(1), ball_center(2), ball_radius, sphere_name);
        }
 
        // write cloth(es)

@@ -62,9 +62,13 @@ public:
 
     void initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1);
 
+    void initialize_regular_mesh_horizental(const int input_Nx, const int input_Nz, const T input_xmin, const T input_xmax, const T input_zmin, const T input_zmax, const T input_rho = 1);
+
     void add_cloth_to_existing_mesh(const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_rho = 1);
 
     void initialize_parellel_clothes(const int num_clothes, const int input_Nx, const int input_Ny, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_zmin, const T input_zmax, const T input_rho = 1);
+
+    void initialize_parellel_clothes_horizental(const int num_clothes, const int input_Nx, const int input_Nz, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_zmin, const T input_zmax, const T input_rho = 1);
 };
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -134,6 +138,76 @@ initialize_regular_mesh(const int input_Nx, const int input_Ny, const T input_xm
         mass[node3] += rho[i]*area[i] / 3.0;; 
     }
 }
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: initialize_regular_mesh_horizental
+// Description: Initialize a regular rectangle triangle mesh in x-z plane.
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T>
+void Triangle_Mesh_3d<T>::
+initialize_regular_mesh_horizental(const int input_Nx, const int input_Nz, const T input_xmin, const T input_xmax, const T input_zmin, const T input_zmax, const T input_rho)
+{
+    std::cout << "Initializing regular rectangle triangle mesh horizentally (in x-z plane) ...\n";
+
+    Nx = input_Nx;
+    Nz = input_Nz;
+    xmin = input_xmin;
+    xmax = input_xmax;
+    zmin = input_zmin;
+    zmax = input_zmax;
+    dx = (xmax - xmin) / (Nx - 1);
+    dz = (zmax - zmin) / (Nz - 1);
+
+    // build nodes
+    for (int j=0; j<Nz; j++) {
+        for (int i=0; i<Nx; i++) {
+            node_type current_node(xmin + dx*i, 0.0, zmin + dz*j);
+            nodes.push_back(current_node); } }
+
+    // build elements
+    for (int j=0; j<Nz-1; j++) {
+        for (int i=0; i<Nx-1; i++) {
+            element_type first_element(Nx*j+i, Nx*(j+1)+i+1, Nx*(j+1)+i);
+            element_type second_element(Nx*j+i, Nx*j+i+1, Nx*(j+1)+i+1);
+            elements.push_back(first_element);
+            elements.push_back(second_element); }}
+
+    // build edges
+    for (int j=0; j<Nz; j++) { 
+        for (int i=0; i<Nx-1; i++) {
+            edge_type current_edge(Nx*j+i, Nx*j+i+1);
+            edges.push_back(current_edge); }}
+    for (int i=0; i<Nx; i++) {
+        for (int j=0; j<Nz-1; j++) {
+            edge_type current_edge(Nx*j+i, Nx*(j+1)+i);
+            edges.push_back(current_edge); }}
+    for (int i=0; i<Nx-1; i++) {
+        for (int j=0; j<Nz-1; j++) {
+            edge_type current_edge(Nx*j+i, Nx*(j+1)+i+1);
+            edges.push_back(current_edge); }}
+
+    // build rho and area
+    for (unsigned int i=0; i<elements.size(); i++) {
+        rho.push_back(input_rho);
+        T positions[9] = { nodes[elements[i](0)](0), nodes[elements[i](0)](1), nodes[elements[i](0)](2),  
+                           nodes[elements[i](1)](0), nodes[elements[i](1)](1), nodes[elements[i](1)](2), 
+                           nodes[elements[i](2)](0), nodes[elements[i](2)](1), nodes[elements[i](2)](2) };
+        simplex_type tri(positions);
+        area.push_back(tri.get_area()); }
+
+    // average rho to nodes -> get mass
+    mass.resize(nodes.size(), 0.0);
+    for (unsigned int i=0; i<elements.size(); i++) {
+        int node1 = elements[i](0);
+        int node2 = elements[i](1);
+        int node3 = elements[i](2);
+        mass[node1] += rho[i]*area[i] / 3.0;; 
+        mass[node2] += rho[i]*area[i] / 3.0;; 
+        mass[node3] += rho[i]*area[i] / 3.0;; 
+    }
+
+}
+
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 // Function: add_cloth_to_existing_mesh
@@ -226,6 +300,89 @@ initialize_parellel_clothes(const int num_clothes, const int input_Nx, const int
     }
 }
 
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: initialize_parellel_clothes_horizental
+// Description: Initialize multiple regular rectangle meshes, each one is on
+//              x-z plane. 
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T>
+void Triangle_Mesh_3d<T>::
+initialize_parellel_clothes_horizental(const int num_clothes, const int input_Nx, const int input_Nz, const T input_xmin, const T input_xmax, const T input_ymin, const T input_ymax, const T input_zmin, const T input_zmax, const T input_rho)
+{
+
+    std::cout << "Initializing multiple clothes...\n";
+
+    Nx = input_Nx;
+    Ny = num_clothes;
+    Nz = input_Nz;
+
+    xmin = input_xmin;
+    xmax = input_xmax;
+    ymin = input_ymin;
+    ymax = input_ymax;
+    zmin = input_zmin;
+    zmax = input_zmax;
+    dx = (xmax - xmin) / (Nx - 1);
+    dy = (ymax - ymin) / (Ny - 1);
+    dz  =(zmax - zmin) / (Nz - 1);
+
+    for (int cloth_index = 0; cloth_index < num_clothes; cloth_index++) {
+        // compute y coordinate
+        T y_position = ymin + dy*cloth_index;
+
+        // build nodes
+        for (int j=0; j<Nz; j++) {
+            for (int i=0; i<Nx; i++) {
+                node_type current_node(xmin + dx*i, y_position, zmin + dz*j);
+                nodes.push_back(current_node); } }
+
+        // build elements
+        for (int j=0; j<Nz-1; j++) {
+            for (int i=0; i<Nx-1; i++) {
+                element_type first_element(Nx*Nz*cloth_index + Nx*j+i, Nx*Nz*cloth_index + Nx*(j+1)+i+1, Nx*Nz*cloth_index + Nx*(j+1)+i);
+                element_type second_element(Nx*Nz*cloth_index + Nx*j+i, Nx*Nz*cloth_index + Nx*j+i+1, Nx*Nz*cloth_index + Nx*(j+1)+i+1);
+                elements.push_back(first_element);
+                elements.push_back(second_element); }}
+     
+        // build edges
+        int shift = Nx*Nz*cloth_index;
+        for (int j=0; j<Nz; j++) {
+            for (int i=0; i<Nx-1; i++) {
+                edge_type current_edge(shift+Nx*j+i, shift+Nx*j+i+1);
+                edges.push_back(current_edge); }}
+        for (int i=0; i<Nx; i++) {
+            for (int j=0; j<Nz-1; j++) {
+                edge_type current_edge(shift+Nx*j+i, shift+Nx*(j+1)+i);
+                edges.push_back(current_edge); }}
+        for (int i=0; i<Nx-1; i++) {
+            for (int j=0; j<Nz-1; j++) {
+                edge_type current_edge(shift+Nx*j+i, shift+Nx*(j+1)+i+1);
+                edges.push_back(current_edge); }}
+        
+    }
+
+    // build rho and area
+    for (unsigned int i=0; i<elements.size(); i++) {
+        rho.push_back(input_rho);
+        T positions[9] = { nodes[elements[i](0)](0), nodes[elements[i](0)](1), nodes[elements[i](0)](2),  
+                           nodes[elements[i](1)](0), nodes[elements[i](1)](1), nodes[elements[i](1)](2), 
+                           nodes[elements[i](2)](0), nodes[elements[i](2)](1), nodes[elements[i](2)](2) };
+        simplex_type tri(positions);
+        area.push_back(tri.get_area()); }
+
+    // average rho to nodes -> get mass
+    mass.resize(nodes.size(), 0.0);
+    for (unsigned int i=0; i<elements.size(); i++) {
+        int node1 = elements[i](0);
+        int node2 = elements[i](1);
+        int node3 = elements[i](2);
+        mass[node1] += rho[i]*area[i] / 3.0;; 
+        mass[node2] += rho[i]*area[i] / 3.0;; 
+        mass[node3] += rho[i]*area[i] / 3.0;; 
+    }
+
+
+}
 
 
 } } // end namespaces
