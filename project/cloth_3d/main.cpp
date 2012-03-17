@@ -19,11 +19,11 @@
 int main(int argc, char ** argv)
 {
 #ifdef _OPENMP
-    omp_set_num_threads(8);
+    omp_set_num_threads(4);
 #endif
     typedef double T;
     typedef ditto::algebra::VECTOR_3D<T> Vec3;
-    int test = 3;
+    int test = 5;
 
     T dt;
     T E;
@@ -172,18 +172,18 @@ int main(int argc, char ** argv)
     //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
     else if (test == 4) { 
         dt = 1.0/1000.0;
-        int last_frame = 8000;
+        int last_frame = 5000;
         E = 1000;
         rho = 10;
         use_gravity = true;
         ball_spring_constant = 1e4;
-        int num_of_clothes = 2;
+        int num_of_clothes = 5;
         ditto::geometry::Triangle_Mesh_3d<T> tm;
-        tm.initialize_regular_mesh_horizental(21, 21, -0.5, 0.5, -0.5, 0.5, rho);
-        // tm.initialize_parellel_clothes_horizental(num_of_clothes, 21, 21, -0.5, 0.5, 0, 0.6, -0.5, 0.5, rho);
+        tm.initialize_regular_mesh_horizental(41, 41, -0.5, 0.5, -0.5, 0.5, rho);
+        // tm.initialize_parellel_clothes_horizental(num_of_clothes, 41, 41, -0.5, 0.5, 0, 0.4, -0.5, 0.5, rho);
         ditto::cloth_3d::Neo_Hookean_Cloth_3d_Fvm_Explicit<T, ditto::geometry::Triangle_Mesh_3d<T> > cloth(tm, dt, E, 0.3, 0.001, use_gravity);
         // cloth.aware_of_num_of_clothes(num_of_clothes);
-        // cloth.switch_self_collision(true, 1, 0.005);
+        cloth.switch_self_collision(true, 1, 0.005);
         frame = 1;
         ballP.Set_Value(0, -0.2, 0);
         ballV.Set_Value(0, 0, 0);
@@ -197,8 +197,8 @@ int main(int argc, char ** argv)
             cloth.add_gravity(0, -9.8,0);
             cloth.add_ball_collision(ballP(0), ballP(1), ballP(2), ballR, ball_spring_constant);
             cloth.update_one_step();
-            cloth.write_output(frame++);
-            // cloth.write_vtk(frame++);
+            // cloth.write_output(frame++);
+            cloth.write_vtk(frame++);
             if (frame > last_frame) break;
             double end = omp_get_wtime();
             double cost = end - begin;
@@ -210,6 +210,97 @@ int main(int argc, char ** argv)
             std::cout << "  To finish " << last_frame << " frames, still need " << average_cost*(last_frame-frame)/60.0 << " minutes.\n" << std::endl;
         } 
     }
+
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*   
+    // Test 5 clothes piling
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    else if (test == 5) { 
+        dt = 1.0/1000.0;
+        int last_frame = 20000;
+        E = 1000;
+        rho = 10;
+        use_gravity = true;
+        ball_spring_constant = 1e4;
+        int num_of_clothes = 75;
+        ditto::geometry::Triangle_Mesh_3d<T> tm;
+        tm.initialize_parellel_clothes_horizental(num_of_clothes, 11, 11, -0.5, 0.5, 0, 6, -0.5, 0.5, rho);
+        ditto::cloth_3d::Neo_Hookean_Cloth_3d_Fvm_Explicit<T, ditto::geometry::Triangle_Mesh_3d<T> > cloth(tm, dt, E, 0.3, 0.001, use_gravity);
+        cloth.aware_of_num_of_clothes(num_of_clothes);
+        cloth.switch_self_collision(true, 2, 0.015);
+        frame = 1;
+        double very_begin = omp_get_wtime();
+        while (1) {
+            double begin= omp_get_wtime();
+            std::cout << "--- Frame " << frame <<"  -------------------------------------" << std::endl;
+            std::cout << "  simulating time: " << (frame-1)*dt <<  "\n";
+            cloth.compute_elasticity();
+            cloth.add_gravity(0, -9.8,0);
+            cloth.add_ground_collision(-1, 1e3, 0.5);
+            cloth.update_one_step();
+            // cloth.write_output(frame++);
+            cloth.write_vtk(frame++);
+            if (frame > last_frame) break;
+            double end = omp_get_wtime();
+            double cost = end - begin;
+            double time_passed = end - very_begin;
+            double average_cost = time_passed/frame;
+            std::cout << "  Time cost for this frame: " << cost << " s"<< std::endl;
+            std::cout << "  Time passed in total: " << time_passed << " s" << std::endl;
+            std::cout << "  Average time cost for each frame: " << average_cost << " s" << std::endl;
+            std::cout << "  To finish " << last_frame << " frames, still need " << average_cost*(last_frame-frame)/60.0 << " minutes.\n" << std::endl;
+        } 
+    }
+
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*   
+    // Test 6: folding cloth
+    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+    else if (test == 6) { 
+        dt = 1.0/1000.0;
+        int last_frame = 8000;
+        E = 1000;
+        rho = 10;
+        use_gravity = true;
+        ditto::geometry::Triangle_Mesh_3d<T> tm;
+        tm.initialize_regular_mesh_horizental(21, 21, -0.5, 0.5, -0.5, 0.5, rho);
+        ditto::cloth_3d::Neo_Hookean_Cloth_3d_Fvm_Explicit<T, ditto::geometry::Triangle_Mesh_3d<T> > cloth(tm, dt, E, 0.3, 0.001, use_gravity);
+        T dirichlet_v = 1;
+        T dirichlet_new = 0;
+        cloth.switch_self_collision(true, 2, 0.01);
+        frame = 1;
+        double very_begin= omp_get_wtime();
+        while (1) {
+            double begin= omp_get_wtime();
+            std::cout << "--- Frame " << frame <<"  -------------------------------------" << std::endl;
+            std::cout << "  simulating time: " << (frame-1)*dt <<  "\n";
+
+            if (frame % 500 == 0) dirichlet_v *= -1;
+            Vec3 dirichlet_displacement( 0, 0,  dirichlet_new);
+            dirichlet_new += dt*dirichlet_v;
+
+            cloth.clear_previous_dirichlet_conditions();
+            
+            if (frame < 1100) {
+                cloth.set_dirichlet_with_a_bounding_box(-0.52, -0.48,-100,100, 0.48, 0.52, dirichlet_displacement(0), dirichlet_displacement(1), dirichlet_displacement(2));
+                cloth.set_dirichlet_with_a_bounding_box(0.48, 0.52,-100,100, 0.48, 0.52, dirichlet_displacement(0), dirichlet_displacement(1), dirichlet_displacement(2)); }
+
+            cloth.compute_elasticity();
+            cloth.add_gravity(0, -9.8,0);
+            cloth.add_ground_collision(-0.3, 1e4, 0.5);
+            cloth.update_one_step();
+            // cloth.write_output(frame++);
+            cloth.write_vtk(frame++);
+            if (frame > last_frame) break;
+            double end = omp_get_wtime();
+            double cost = end - begin;
+            double time_passed = end - very_begin;
+            double average_cost = time_passed/frame;
+            std::cout << "  Time cost for this frame: " << cost << " s"<< std::endl;
+            std::cout << "  Time passed in total: " << time_passed << " s" << std::endl;
+            std::cout << "  Average time cost for each frame: " << average_cost << " s" << std::endl;
+            std::cout << "  To finish " << last_frame << " frames, still need " << average_cost*(last_frame-frame)/60.0 << " minutes.\n" << std::endl;
+        } 
+    }
+  
   
     return 0;
 }

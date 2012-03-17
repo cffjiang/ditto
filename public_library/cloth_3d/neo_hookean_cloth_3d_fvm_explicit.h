@@ -116,6 +116,8 @@ public:
 
     void set_dirichlet_with_a_bounding_box(T x0, T xM, T y0, T yM, T z0, T zM, T xmove, T ymove, T zmove);
 
+    void clear_previous_dirichlet_conditions();
+
     void add_ball_collision(T xb, T yb, T zb, T rb, T spring_constant);
 
     void add_ground_collision(T ground_level, T spring_constant, T friction_constant);
@@ -376,6 +378,16 @@ set_dirichlet_with_a_bounding_box(T x0, T xM, T y0, T yM, T z0, T zM, T xmove, T
             dirichlet_nodes.push_back(i);
             node_3d_type fixed_movement(xmove, ymove, zmove);
             dirichlet_displacement.push_back(fixed_movement); }}
+}
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+// Function: clear_previous_dirichlet_conditions
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+template<class T, class MeshType>
+void Neo_Hookean_Cloth_3d_Fvm_Explicit<T, MeshType>::
+clear_previous_dirichlet_conditions() {
+    dirichlet_nodes.clear();
+    dirichlet_displacement.clear();
 }
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
