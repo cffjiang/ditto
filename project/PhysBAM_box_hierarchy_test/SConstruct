@@ -1,0 +1,91 @@
+# scons build file for PhysBAM_box_hierarchy_test
+#
+# Written by: Chenfanfu Jiang, 2012
+#
+
+import os
+import sys
+
+include_paths = []
+compile_flags = []
+lib_paths = []
+libs = []
+linking_flags = []
+
+
+##
+## processor specific flags
+##
+
+compiler = 'g++'
+
+compile_flags.append('-march=native')
+compile_flags.append('-fprofile-arcs')
+compile_flags.append('-ftest-coverage')
+
+# process command line arguments
+build_type = ARGUMENTS.get('type','release')
+if build_type == 'release':
+
+    build_dir = 'build/release'
+    compile_flags.append('-DNDEBUG')
+    compile_flags.append('-O3')
+
+elif build_type == 'debug':
+
+    build_dir = 'build/debug'
+    compile_flags.append('-g')
+    linking_flags.append('-g')
+
+else:
+    print 'scons type=(release|debug)'
+    sys.exit(1)
+
+openmp = ARGUMENTS.get('openmp','true')
+if openmp == 'true':
+    compile_flags.append('-fopenmp')
+    libs.append('gomp')
+
+####################################################################
+# include header folders
+include_paths.append('/usr/include');
+
+physbam_root = os.environ.get('PHYSBAM')
+include_paths.append(physbam_root + '/Public_Library');
+
+ditto_root = os.environ.get('DITTO_ROOT')
+include_paths.append(ditto_root);
+
+# include library folders
+physbam_library_release = os.environ.get('PHYSBAM_LIBRARY_RELEASE');
+lib_paths.append('/usr/local/lib')
+lib_paths.append(physbam_library_release);
+
+# additional libraries
+libs.append('m')
+libs.append('gcov')
+libs.append('jpeg');
+libs.append('png');
+libs.append('PhysBAM_All_static');
+####################################################################
+
+compile_flags.append('-Wno-deprecated')
+
+# linking_flags.append('-pthread')
+
+env = Environment(
+CXX=compiler,
+CPPFLAGS=compile_flags,
+CPPPATH=include_paths,
+LIBPATH=lib_paths,
+LIBS=libs,
+LINKFLAGS=linking_flags
+)
+
+Export('env')
+
+env.SConscript('SConscript', build_dir=build_dir, duplicate=0)
+
+
+if os.path.exists('./PhysBAM_box_hierarchy_test_'+build_type) == False:
+    os.system('ln -s build/'+build_type+'/PhysBAM_box_hierarchy_test PhysBAM_box_hierarchy_test_'+build_type)

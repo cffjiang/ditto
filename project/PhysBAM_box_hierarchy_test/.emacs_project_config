@@ -1,0 +1,12 @@
+
+(setq physbam-project-type "release")
+
+
+(setq physbam-compile-mode "single")
+
+
+(setq physbam-compile-count 4)
+
+
+(setq physbam-output-directory "/home/fanfu/Libs/PhysBAM-2011/Projects/articulated_rigid_bodies/Blocks/output")
+
