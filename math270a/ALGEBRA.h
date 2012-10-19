@@ -413,7 +413,7 @@ public:
 
     T Determinant(){return a11*a22-a21*a12;}
 	
-    T Norm(){return std::abs(a11*a11+a12*a12+a21*a21+a22*a22);}
+    T Norm(){return std::sqrt(a11*a11+a12*a12+a21*a21+a22*a22);}
 
     MATRIX_2X2<T> Data(){return MATRIX_2X2<T>(a11,a21,a12,a22);}
 
@@ -465,7 +465,6 @@ public:
         if((sigma(0)>0&&sigma(1)<0&&std::abs(sigma(1))>std::abs(sigma(0)))||(sigma(0)<0&&sigma(1)>0&&std::abs(sigma(0))>=std::abs(sigma(1)))||(sigma(0)<=0&&sigma(1)<=0)){
             sigma(0)=-sigma(0);
             sigma(1)=-sigma(1);
-
             U=(-1.0)*U;}
     }
 	
@@ -489,28 +488,6 @@ public:
     static MATRIX_2X2<double> Outer_Product(const VECTOR_2D<T>& u,const VECTOR_2D<T>& v){return MATRIX_2X2(u.x_copy()*v.x_copy(),u.y_copy()*v.x_copy(),u.x_copy()*v.y_copy(),u.y_copy()*v.y_copy());}
     static T Contract(const MATRIX_2X2<T>& A,const MATRIX_2X2<T>& B){return A.a11*B.a11+A.a21*B.a21+A.a12*B.a12+A.a22*B.a22;}
     static MATRIX_2X2<double> Identity(){return MATRIX_2X2((T)1,(T)0,(T)0,(T)1);}
-	
-// void QR(MATRIX_2X2<T>&Q,MATRIX_2X2<T>&R, const T tol){
-//         //used my own QR
-//         T c,s;
-//         //calc G3
-//         if(fabs(a21) < tol){
-//             c = 1;s = 0;
-//         }
-//         else{
-//             T alpha = 1/sqrt(a11*a11 + a21*a21);
-//             s = -a21*alpha;
-//             c = a11*alpha;
-//         }
-         
-//         Q.a11 = c;
-//         Q.a21 = s;
-//         Q.a12 = -s;
-//         Q.a22 = c;
-         
-//         R = Q*(*this);
-//         Q = Q.Transposed();
-//     }
 
     void QR(MATRIX_2X2<T>&Q,MATRIX_2X2<T>&R){
         T r,s,c;
@@ -658,6 +635,12 @@ public:
         x[1]=x[3];x[2]=x[6];x[5]=x[7];
         x[3]=temp1;x[6]=temp2;x[7]=temp5;
     }
+
+    T Norm(){
+        T n=0;
+        for(int i=0;i<9;i++) n+=x[i]*x[i];
+        return std::sqrt(n);
+    }
 	
     MATRIX_3X3<T> Transposed() const{
         return MATRIX_3X3(x[0],x[3],x[6],x[1],x[4],x[7],x[2],x[5],x[8]);
@@ -739,30 +722,34 @@ public:
         MATRIX_3X3<T> Sigma_sq=V.Transposed()*F.Transposed()*F*V;
         T sq1=Sigma_sq(0,0),sq2=Sigma_sq(1,1),sq3=Sigma_sq(2,2);
         int index[3]={0,1,2};
+        int swap_count=0;
         if(sq1>sq2){
             int temp=index[0];
             index[0]=index[1];
             index[1]=temp;
             temp=sq1;
             sq1=sq2;
-            sq2=temp;}
+            sq2=temp;
+            swap_count++;}
         if(sq2>sq3){
             int temp=index[1];
             index[1]=index[2];
             index[2]=temp;
             temp=sq2;
             sq2=sq3;
-            sq3=temp;}
+            sq3=temp;
+            swap_count++;}
         if(sq1>sq2){
             int temp=index[0];
             index[0]=index[1];
             index[1]=temp;
             temp=sq1;
             sq1=sq2;
-            sq2=temp;}
+            sq2=temp;
+            swap_count++;}
         MATRIX_3X3<T> Vnew(V.Column(index[0]),V.Column(index[1]),V.Column(index[2]));
         V=Vnew;
-
+        if(swap_count%2!=0) V=(-1.0)*V;
     }
 	
     void Delta_Sigma(const MATRIX_3X3<T>& delta_F, VECTOR_3D<T>& delta_sigma)const{
