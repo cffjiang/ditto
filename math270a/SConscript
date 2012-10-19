@@ -1,0 +1,6 @@
+
+src_files = ['main.cpp']
+
+Import('env')
+
+env.Program('math270a', src_files)
