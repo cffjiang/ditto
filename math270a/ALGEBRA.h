@@ -663,8 +663,8 @@ public:
             assert(false);
             return VECTOR_3D<T>(0,0,0);}
     }
-
-    void SVD(MATRIX_3X3<T>& U,VECTOR_3D<T>& sigma,MATRIX_3X3<T>& V,const T tol=(T)1e-10,const int max_iterations=20)const {
+	
+ void SVD(MATRIX_3X3<T>& U,VECTOR_3D<T>& sigma,MATRIX_3X3<T>& V,const T tol=(T)1e-10,const int max_iterations=20)const {
         //You need to implement this function.
         T c, s;
         V = MATRIX_3X3<T>(0);
@@ -802,72 +802,42 @@ public:
         FV.QR(U, SIGMA, tol);
          
         sigma = VECTOR_3D<T>(SIGMA.x[0], SIGMA.x[4],SIGMA.x[8]);
+
         //make sure that if there is negative singular value it is the last one
-         
-        //just check how many negatives are there, if two, make them both positive and make
-        //the corresponding rows of U negative
-        //if three, make two of them positive
-        //if one, make it the smallest in magnitude
-         
-        // if(sigma.x() < 0 && sigma.y() < 0 ){
-        //     sigma.x() = -sigma.x();
-        //     sigma.y() = -sigma.y();
-             
-        //     U.x[0] = -U.x[0];
-        //     U.x[1] = -U.x[1];
-        //     U.x[3] = -U.x[3];
-        //     U.x[4] = -U.x[4];
-        //     U.x[6] = -U.x[6];
-        //     U.x[7] = -U.x[7];
-        // }
-        // else if(sigma.z() < 0 && sigma.y() < 0 ){
-        //     sigma.z() = -sigma.z();
-        //     sigma.y() = -sigma.y();
-             
-        //     U.x[1] = -U.x[1];
-        //     U.x[2] = -U.x[2];
-        //     U.x[4] = -U.x[4];
-        //     U.x[5] = -U.x[5];
-        //     U.x[7] = -U.x[7];
-        //     U.x[8] = -U.x[8];
-        // }
-        // else if(sigma.x() < 0 && sigma.z() < 0 ){
-        //     sigma.x() = -sigma.x();
-        //     sigma.y() = -sigma.y();
-             
-        //     U.x[0] = -U.x[0];
-        //     U.x[2] = -U.x[2];
-        //     U.x[3] = -U.x[3];
-        //     U.x[5] = -U.x[5];
-        //     U.x[6] = -U.x[6];
-        //     U.x[8] = -U.x[8];
-        // }
-         
-        // if(sigma.x() < 0){
-        //     //swap first row with the last row
-        //     VECTOR_3D<T> temp_row = U.Row(0);
-             
-        //     U.x[0] = -U.x[2];
-        //     U.x[3] = -U.x[5];
-        //     U.x[6] = -U.x[8];
-             
-        //     U.x[2] = temp_row.x();
-        //     U.x[5] = temp_row.y();
-        //     U.x[8] = temp_row.z();
-        // }
-         
-        // if(sigma.y() < 0){
-        //     //swap second row with the last row
-        //     VECTOR_3D<T> temp_row = U.Row(1);
-             
-        //     U.x[1] = -U.x[2];
-        //     U.x[4] = -U.x[5];
-        //     U.x[7] = -U.x[8];
-             
-        //     U.x[2] = temp_row.x();
-        //     U.x[5] = temp_row.y();
-        //     U.x[8] = temp_row.z();
-        // }
+        int N_negative=(sigma(0)<0)+(sigma(1)<0)+(sigma(2)<0);
+        if(N_negative==0) return;
+        if(N_negative==1){
+            if(sigma(0)<0){
+                sigma(0)=-sigma(0);
+                sigma(2)=-sigma(2);
+                for(int i=0;i<3;i++) V(i,0)=-V(i,0);
+                for(int i=0;i<3;i++) V(i,2)=-V(i,2);}
+            else if(sigma(1)<0){
+                sigma(1)=-sigma(1);
+                sigma(2)=-sigma(2);
+                for(int i=0;i<3;i++) V(i,1)=-V(i,1);
+                for(int i=0;i<3;i++) V(i,2)=-V(i,2);}}
+        if(N_negative==2){
+            if(sigma(0)>=0){
+                sigma(1)=-sigma(1);
+                sigma(2)=-sigma(2);
+                for(int i=0;i<3;i++) V(i,1)=-V(i,1);
+                for(int i=0;i<3;i++) V(i,2)=-V(i,2);}
+            else if(sigma(1)>=0){
+                sigma(0)=-sigma(0);
+                sigma(2)=-sigma(2);
+                for(int i=0;i<3;i++) V(i,0)=-V(i,0);
+                for(int i=0;i<3;i++) V(i,2)=-V(i,2);}
+            else if(sigma(2)>=0){
+                sigma(0)=-sigma(0);
+                sigma(1)=-sigma(1);
+                for(int i=0;i<3;i++) V(i,0)=-V(i,0);
+                for(int i=0;i<3;i++) V(i,1)=-V(i,1);}}
+        if(N_negative==3){
+                sigma(0)=-sigma(0);
+                sigma(1)=-sigma(1);
+                for(int i=0;i<3;i++) V(i,0)=-V(i,0);
+                for(int i=0;i<3;i++) V(i,1)=-V(i,1);}
          
     }
      
