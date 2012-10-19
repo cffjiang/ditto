@@ -11,41 +11,69 @@ int main()
     typedef double T;
     srand ( time(NULL) );
 
-    MATRIX_2X2<T> F,U,V,UtU,VtV;
+
+    //##############################################################################################
+    // 2D TEST
+    //##############################################################################################
+    MATRIX_2X2<T> F,U,V,UtU,VtV,UUt,VVt;
     VECTOR_2D<T> sigma;
+    int random_integer;
 
     for(int test=0;test<100000;test++){
-        std::cout<<"test "<<test<<std::endl;
-        // Randomly build F from -2, 0, 1, 2
-        random_integer = -3+rand()%5+1;
+        std::cout<<"test "<<test<< " ";
+
+        random_integer =-2+rand()%6;
+        std::cout<<random_integer<<std::endl;
         F(0,0)=random_integer;
-        random_integer = -3+rand()%5+1;
+        random_integer =-3+rand()%6;
         F(0,1)=random_integer;
-        random_integer = -3+rand()%5+1;
+        random_integer =-3+rand()%6;
         F(1,0)=random_integer;
-        random_integer = -3+rand()%5+1;
+        random_integer =-3+rand()%6;
         F(1,1)=random_integer;
 
         F.SVD(U,sigma,V);
         MATRIX_2X2<T> Iden=MATRIX_2X2<T>::Identity();
         UtU=U.Transposed()*U;
         VtV=V.Transposed()*V;
+        UUt=U*U.Transposed();
+        VVt=V*V.Transposed();
         MATRIX_2X2<T> utu_error=UtU-Iden;
         MATRIX_2X2<T> vtv_error=VtV-Iden;
+        MATRIX_2X2<T> uut_error=UUt-Iden;
+        MATRIX_2X2<T> vvt_error=VVt-Iden;
         MATRIX_2X2<T> Sigma(sigma(0),0,0,sigma(1));
         MATRIX_2X2<T> restore=U*Sigma*V.Transposed();;
         MATRIX_2X2<T> error=restore-F;
-        if(utu_error.Norm()>1e-10 || vtv_error.Norm()>1e-10 || error.Norm() >1e-10 || (sigma(0)<0&&sigma(1)<0) || (sigma(0)<0 && std::abs(sigma(0))>std::abs(sigma(1))) || (sigma(1)<0 && std::abs(sigma(1))>std::abs(sigma(0)))){
-            std::cout<<"F "; F.Print();
-            std::cout<<"U "; U.Print();
-            std::cout<<"UtU "; UtU.Print();
-            std::cout<<"V ";    V.Print();
-            std::cout<<"VtV "; VtV.Print();
-            std::cout<<"sigma ";    sigma.Print();
-            std::cout<<"restore ";    restore.Print();
-            std::cout<<"error ";    error.Print();
-            throw(0);
-        }
+        MATRIX_2X2<T> FtF=F.Transposed()*F;
+        MATRIX_2X2<T> FV=F*V;
+
+        if(std::abs(U.Determinant()-1)>1e-10 || 
+            abs(V.Determinant()-1)>1e-10 ||
+            utu_error.Norm()>1e-10 || 
+            vtv_error.Norm()>1e-10 || 
+            uut_error.Norm()>1e-10 || 
+            vvt_error.Norm()>1e-10 ||
+            error.Norm() >1e-10 || 
+            (sigma(0)<0&&sigma(1)<0) || 
+            (sigma(0)<0 && std::abs(sigma(0))>std::abs(sigma(1))) || 
+            (sigma(1)<0 && std::abs(sigma(1))>std::abs(sigma(0))) ||
+            !(sigma(0)>=sigma(1)) ||
+            !(std::abs(sigma(0))>=std::abs(sigma(1))) ){
+
+                std::cout<<"F "; F.Print();
+                std::cout<<"FV "; FV.Print();
+                std::cout<<"U "; U.Print();
+                std::cout<<"UtU "; UtU.Print();
+                std::cout<<"V ";    V.Print();
+                std::cout<<"VtV "; VtV.Print();
+                std::cout<<"sigma ";    sigma.Print();
+                std::cout<<"restore ";    restore.Print();
+                std::cout<<"error ";    error.Print();
+                std::cout<<"u determinant "<< U.Determinant()<<std::endl;
+                std::cout<<"V determinant "<< V.Determinant()<<std::endl;
+                throw(0);}
+
     }
 
     return 0;

@@ -410,7 +410,7 @@ public:
         if(number==0) return VECTOR_2D<T>(a11,a21);
         else return VECTOR_2D<T>(a12,a22);		
     }
-	
+
     T Determinant(){return a11*a22-a21*a12;}
 	
     T Norm(){return std::abs(a11*a11+a12*a12+a21*a21+a22*a22);}
@@ -441,21 +441,19 @@ public:
             c=1.0/std::sqrt(1.0+t*t);
             s=t*c;}
         V=MATRIX_2X2<T>(c,-s,s,c);
-        MATRIX_2X2<T> Vt=V.Transposed();
-        MATRIX_2X2<T> SigmaSquared=Vt*FtF*V;
-        if(SigmaSquared(0,0)<SigmaSquared(1,1)){
-            MATRIX_2X2<T> V_bkup=V;
-            V.a11=V_bkup.a12;
-            V.a21=V_bkup.a22;
-            V.a12=V_bkup.a11;
-            V.a22=V_bkup.a21;}
+
+        // Sort V
+        MATRIX_2X2<T> Sigma_sq=V.Transposed()*F.Transposed()*F*V;
+        if(Sigma_sq(0,0)<Sigma_sq(1,1)){
+            V=MATRIX_2X2<T>(s,c,-c,s);}
 
         // FV=QR=USigma
         MATRIX_2X2<T> FV=F*V;
+
         if(std::abs(FV(1,0))<tol){
             c=1;s=0;}
         else{
-            T alpha=1/std::sqrt(FV(0,0)*FV(0,0)+FV(1,0)*FV(1,0));
+            T alpha=1.0/std::sqrt(FV(0,0)*FV(0,0)+FV(1,0)*FV(1,0));
             s=-FV(1,0)*alpha;
             c=FV(0,0)*alpha;}
         U=MATRIX_2X2<T>(c,-s,s,c);
@@ -464,16 +462,11 @@ public:
         sigma(1)=Sigma(1,1);
 
         // sign convention
-        if(sigma(0)<0&&sigma(1)<0){
+        if((sigma(0)>0&&sigma(1)<0&&std::abs(sigma(1))>std::abs(sigma(0)))||(sigma(0)<0&&sigma(1)>0&&std::abs(sigma(0))>=std::abs(sigma(1)))||(sigma(0)<=0&&sigma(1)<=0)){
             sigma(0)=-sigma(0);
             sigma(1)=-sigma(1);
+
             U=(-1.0)*U;}
-        else if(sigma(0)<0&&std::abs(sigma(0))>std::abs(sigma(1))){
-            sigma(0)=-sigma(0);
-            U(0,0)=-U(0,0);U(1,0)=-U(1,0);}
-        else if(sigma(1)<0&&std::abs(sigma(1))>std::abs(sigma(0))){
-            sigma(1)=-sigma(1);
-            U(0,1)=-U(0,1);U(1,1)=-U(1,1);}
     }
 	
     void Delta_Sigma(const MATRIX_2X2<T>& delta_F, VECTOR_2D<T>& delta_sigma)const{
@@ -497,6 +490,28 @@ public:
     static T Contract(const MATRIX_2X2<T>& A,const MATRIX_2X2<T>& B){return A.a11*B.a11+A.a21*B.a21+A.a12*B.a12+A.a22*B.a22;}
     static MATRIX_2X2<double> Identity(){return MATRIX_2X2((T)1,(T)0,(T)0,(T)1);}
 	
+// void QR(MATRIX_2X2<T>&Q,MATRIX_2X2<T>&R, const T tol){
+//         //used my own QR
+//         T c,s;
+//         //calc G3
+//         if(fabs(a21) < tol){
+//             c = 1;s = 0;
+//         }
+//         else{
+//             T alpha = 1/sqrt(a11*a11 + a21*a21);
+//             s = -a21*alpha;
+//             c = a11*alpha;
+//         }
+         
+//         Q.a11 = c;
+//         Q.a21 = s;
+//         Q.a12 = -s;
+//         Q.a22 = c;
+         
+//         R = Q*(*this);
+//         Q = Q.Transposed();
+//     }
+
     void QR(MATRIX_2X2<T>&Q,MATRIX_2X2<T>&R){
         T r,s,c;
         if(a21==(double)0){
@@ -667,7 +682,86 @@ public:
     }
 	
     void SVD(MATRIX_3X3<T>& U,VECTOR_3D<T>& sigma,MATRIX_3X3<T>& V,const T tol=(T)1e-10,const int max_iterations=10)const {
-        //You need to implement this function.
+        MATRIX_3X3<T> F(Column(0),Column(1),Column(2));
+        MATRIX_3X3<T> Ft=F.Transposed();
+
+        // Compute V
+        V=Identity();
+        MATRIX_3X3<T> A=Ft*F;
+        for(int it=0;it<max_iterations;it++){
+            T c,s;
+            MATRIX_2X2<T> Asub;
+
+            Asub=MATRIX_2X2<T>(A(0,0),A(1,0),A(0,1),A(1,1));
+            if(std::abs(Asub(1,0))<tol){
+                c=1;s=0;}
+            else{
+                T tau=(Asub(0,0)-Asub(1,1))/(2.0*Asub(1,0));
+                T t1=tau+std::sqrt(1+tau*tau),t2=tau-std::sqrt(1+tau*tau),t;
+                if(std::abs(t1)>std::abs(t2)) t=t2;
+                else t=t1;
+                c=1.0/std::sqrt(1.0+t*t);
+                s=t*c;}
+            MATRIX_3X3<T> G12(c,-s,0,s,c,0,0,0,1);
+            A=G12.Transposed()*A*G12;
+            V=V*G12;
+
+            Asub=MATRIX_2X2<T>(A(0,0),A(2,0),A(0,2),A(2,2));
+            if(std::abs(Asub(1,0))<tol){
+                c=1;s=0;}
+            else{
+                T tau=(Asub(0,0)-Asub(1,1))/(2.0*Asub(1,0));
+                T t1=tau+std::sqrt(1+tau*tau),t2=tau-std::sqrt(1+tau*tau),t;
+                if(std::abs(t1)>std::abs(t2)) t=t2;
+                else t=t1;
+                c=1.0/std::sqrt(1.0+t*t);
+                s=t*c;}
+            MATRIX_3X3<T> G13(c,0,-s,0,1,0,s,0,c);
+            A=G13.Transposed()*A*G13;
+            V=V*G13;
+
+            Asub=MATRIX_2X2<T>(A(1,1),A(2,1),A(1,2),A(2,2));
+            if(std::abs(Asub(1,0))<tol){
+                c=1;s=0;}
+            else{
+                T tau=(Asub(0,0)-Asub(1,1))/(2.0*Asub(1,0));
+                T t1=tau+std::sqrt(1+tau*tau),t2=tau-std::sqrt(1+tau*tau),t;
+                if(std::abs(t1)>std::abs(t2)) t=t2;
+                else t=t1;
+                c=1.0/std::sqrt(1.0+t*t);
+                s=t*c;}
+            MATRIX_3X3<T> G23(1,0,0,0,c,-s,0,s,c);
+            A=G23.Transposed()*A*G23;
+            V=V*G23;
+        }
+        
+        // Sort sigma squared and reorder V
+        MATRIX_3X3<T> Sigma_sq=V.Transposed()*F.Transposed()*F*V;
+        T sq1=Sigma_sq(0,0),sq2=Sigma_sq(1,1),sq3=Sigma_sq(2,2);
+        int index[3]={0,1,2};
+        if(sq1>sq2){
+            int temp=index[0];
+            index[0]=index[1];
+            index[1]=temp;
+            temp=sq1;
+            sq1=sq2;
+            sq2=temp;}
+        if(sq2>sq3){
+            int temp=index[1];
+            index[1]=index[2];
+            index[2]=temp;
+            temp=sq2;
+            sq2=sq3;
+            sq3=temp;}
+        if(sq1>sq2){
+            int temp=index[0];
+            index[0]=index[1];
+            index[1]=temp;
+            temp=sq1;
+            sq1=sq2;
+            sq2=temp;}
+        MATRIX_3X3<T> Vnew(V.Column(index[0]),V.Column(index[1]),V.Column(index[2]));
+        V=Vnew;
 
     }
 	
