@@ -471,7 +471,7 @@ public:
     void Delta_Sigma(const MATRIX_2X2<T>& delta_F, VECTOR_2D<T>& delta_sigma)const{
         MATRIX_2X2<T> F=*this,U,V,UtDFV;
         VECTOR_2D<T> sigma;
-        SVD(U,V,sigma);
+        SVD(U,sigma,V);
         UtDFV=U.Transposed()*delta_F*V;
         delta_sigma=VECTOR_2D<T>(UtDFV(0,0),UtDFV(1,1));
     }
@@ -481,7 +481,7 @@ public:
         MATRIX_2X2<T> U,V,UtDFV;
         VECTOR_2D<T> sigma;
         F.SVD(U,sigma,V);
-        if(sigma(0)==sigma(1)) std::cout<<"FATAL ERROR: Weird case detected -- repeated sigma.\n";
+        if(std::abs(sigma(0)-sigma(1))<1e-10 || std::abs(sigma(0)+sigma(1))<1e-10) std::cout<<"FATAL ERROR: Weird case detected -- repeated sigma.\n";
 
         UtDFV=U.Transposed()*delta_F*V;
         delta_sigma=VECTOR_2D<T>(UtDFV(0,0),UtDFV(1,1));
@@ -489,9 +489,7 @@ public:
         VECTOR_2D<T> rhs(UtDFV(1,0),UtDFV(0,1));
         MATRIX_2X2<T> A(-sigma(0),sigma(1),sigma(1),-sigma(0));
         A.Invert();
-
         VECTOR_2D<T> xy=A*rhs;
-
         T x=xy(0);
         MATRIX_2X2<T> helperU(0,x,-x,0);
         delta_U=(helperU*(U.Transposed())).Transposed();
@@ -688,7 +686,7 @@ public:
             return VECTOR_3D<T>(0,0,0);}
     }
 	
- void SVD(MATRIX_3X3<T>& U,VECTOR_3D<T>& sigma,MATRIX_3X3<T>& V,const T tol=(T)1e-10,const int max_iterations=20)const {
+    void SVD(MATRIX_3X3<T>& U,VECTOR_3D<T>& sigma,MATRIX_3X3<T>& V,const T tol=(T)1e-10,const int max_iterations=20)const {
         T c,s;
         MATRIX_2X2<T> A12,A23,A13;
         MATRIX_3X3<T> G12,G23,G13;
@@ -872,11 +870,33 @@ public:
     }
 
     void Delta_Sigma(const MATRIX_3X3<T>& delta_F, VECTOR_3D<T>& delta_sigma)const{
-        //You need to implement this function.
+        MATRIX_3X3<T> F=*this,U,V,UtDFV;
+        VECTOR_3D<T> sigma;
+        SVD(U,sigma,V);
+        UtDFV=U.Transposed()*delta_F*V;
+        delta_sigma=VECTOR_3D<T>(UtDFV(0,0),UtDFV(1,1));
     }
 	
-    void Delta_SVD(const MATRIX_3X3<T>& delta_F,VECTOR_3D<T>& delta_sigma,MATRIX_3X3<T>& delta_U,MATRIX_2X2<T>& delta_V)const{
-        //You need to implement this function.
+    void Delta_SVD(const MATRIX_3X3<T>& delta_F,VECTOR_3D<T>& delta_sigma,MATRIX_3X3<T>& delta_U,MATRIX_3X3<T>& delta_V)const{
+        MATRIX_3X3<T> F=*this,U,V,UtDFV;
+        VECTOR_3D<T> sigma;
+        F.SVD(U,sigma,V);
+        UtDFV=U.Transposed()*delta_F*V;
+        T sigma1=sigma(0),sigma2=sigma(1),sigma3=sigma(2);
+        if(std::abs(sigma1-sigma2)<1e-10||std::abs(sigma1-sigma3)<1e-10||std::abs(sigma2-sigma3)<1e-10||std::abs(sigma1+sigma2)<1e-10||std::abs(sigma1+sigma3)<1e-10||std::abs(sigma2+sigma3)<1e-10) std::cout<<"FATAL ERROR: Repeated sigma detected.\n";
+
+        delta_sigma=VECTOR_3D<T>(UtDFV(0,0),UtDFV(1,1),UtDFV(2,2));
+        T a=UtDFV(0,1),b=UtDFV(0,2),c=UtDFV(1,2),d=UtDFV(1,0),e=UtDFV(2,0),f=UtDFV(2,1);
+        MATRIX_2X2<T> xpM(sigma2,-sigma1,-sigma1,sigma2);xpM.Invert();
+        MATRIX_2X2<T> yqM(sigma3,-sigma1,-sigma1,sigma3);yqM.Invert(); 
+        MATRIX_2X2<T> zrM(sigma3,-sigma2,-sigma2,sigma3);zrM.Invert();
+        VECTOR_2D<T> xprhs(a,d),yqrhs(b,e),zrrhs(c,f);
+        VECTOR_2D<T> xp=xpM*xprhs,yq=yqM*yqrhs,zr=zrM*zrrhs;
+        T x=xp(0),p=xp(1),y=yq(0),q=yq(1),z=zr(0),r=zr(1);
+        MATRIX_3X3<T> dUtU(0,x,y,-x,0,z,-y,-z,0);
+        MATRIX_3X3<T> dVtV(0,p,q,-p,0,r,-q,-r,0);
+        delta_U=(dUtU*U.Transposed()).Transposed();
+        delta_V=(dVtV*V.Transposed()).Transposed();
     }
 	
     void Invert(){
