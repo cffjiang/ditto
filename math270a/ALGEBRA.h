@@ -469,11 +469,35 @@ public:
     }
 	
     void Delta_Sigma(const MATRIX_2X2<T>& delta_F, VECTOR_2D<T>& delta_sigma)const{
-        //You need to implement this function.
+        MATRIX_2X2<T> F=*this,U,V,UtDFV;
+        VECTOR_2D<T> sigma;
+        SVD(U,V,sigma);
+        UtDFV=U.Transposed()*delta_F*V;
+        delta_sigma=VECTOR_2D<T>(UtDFV(0,0),UtDFV(1,1));
     }
 	
     void Delta_SVD(const MATRIX_2X2<T>& delta_F,VECTOR_2D<T>& delta_sigma,MATRIX_2X2<T>& delta_U,MATRIX_2X2<T>& delta_V)const{
-        //You need to implement this function.
+        MATRIX_2X2<T> F=*this;
+        MATRIX_2X2<T> U,V,UtDFV;
+        VECTOR_2D<T> sigma;
+        F.SVD(U,sigma,V);
+        if(sigma(0)==sigma(1)) std::cout<<"FATAL ERROR: Weird case detected -- repeated sigma.\n";
+
+        UtDFV=U.Transposed()*delta_F*V;
+        delta_sigma=VECTOR_2D<T>(UtDFV(0,0),UtDFV(1,1));
+
+        VECTOR_2D<T> rhs(UtDFV(1,0),UtDFV(0,1));
+        MATRIX_2X2<T> A(-sigma(0),sigma(1),sigma(1),-sigma(0));
+        A.Invert();
+
+        VECTOR_2D<T> xy=A*rhs;
+
+        T x=xy(0);
+        MATRIX_2X2<T> helperU(0,x,-x,0);
+        delta_U=(helperU*(U.Transposed())).Transposed();
+        T y=xy(1);
+        MATRIX_2X2<T> helperV(0,y,-y,0);
+        delta_V=(helperV*(V.Transposed())).Transposed();
     }
 	
     static MATRIX_2X2<T> Givens_Rotation(const VECTOR_2D<T>& x,const T tol=(T)1e-10){
