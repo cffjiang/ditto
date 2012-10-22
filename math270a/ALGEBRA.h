@@ -956,9 +956,9 @@ public:
         std::cout<<"\t\t\t\t" << x[2] << " , " << x[5] << " , " << x[8] << ")" << std::endl;
     }
 
-    static MATRIX_3X3<T> Deformation_Gradient(const VECTOR_3D<T> &X1,const VECTOR_3D<T> &X2,const VECTOR_3D<T> &X3,const VECTOR_3D<T> &X4,const VECTOR_3D<T> &x1,const VECTOR_3D<T> &x2,const VECTOR_3D<T> &x3,const VECTOR_3D<T> &x4){
-        MATRIX_3X3<T> Ds(x2-x1,x3-x1,x4-x1);
-        MATRIX_3X3<T> Dm(X2-X1,X3-X1,X4-X1);
+    static MATRIX_3X3<T> Deformation_Gradient(const VECTOR_3D<T> X1,const VECTOR_3D<T> X2,const VECTOR_3D<T> X3,const VECTOR_3D<T> X4,const VECTOR_3D<T> x1,const VECTOR_3D<T> x2,const VECTOR_3D<T> x3,const VECTOR_3D<T> x4){
+        MATRIX_3X3<T> Ds(x2(0)-x1(0),x2(1)-x1(1),x2(2)-x1(2),x3(0)-x1(0),x3(1)-x1(1),x3(2)-x1(2),x4(0)-x1(0),x4(1)-x1(1),x4(2)-x1(2));
+        MATRIX_3X3<T> Dm(X2(0)-X1(0),X2(1)-X1(1),X2(2)-X1(2),X3(0)-X1(0),X3(1)-X1(1),X3(2)-X1(2),X4(0)-X1(0),X4(1)-X1(1),X4(2)-X1(2));
         T eps=1e-15;
         assert(Dm.Determinant()>=eps||Dm.Determinant()<=-eps);
         Dm.Invert();
@@ -966,10 +966,12 @@ public:
     }
 
     static MATRIX_3X3<T> Deformation_Gradient(const MATRIX_3X3<T> &Dm_inv,const VECTOR_3D<T> &x1,const VECTOR_3D<T> &x2,const VECTOR_3D<T> &x3,const VECTOR_3D<T> &x4){
-        MATRIX_3X3<T> Ds(x2-x1,x3-x1,x4-x1);
+        MATRIX_3X3<T> Ds(x2(0)-x1(0),x2(1)-x1(1),x2(2)-x1(2),x3(0)-x1(0),x3(1)-x1(1),x3(2)-x1(2),x4(0)-x1(0),x4(1)-x1(1),x4(2)-x1(2));
         return Ds*Dm_inv;
     }
-};
+};   
+
+
 	
 static MATRIX_3X3<double> operator+(const MATRIX_3X3<double>& A,const MATRIX_3X3<double>& B){
     return MATRIX_3X3<double>(A.x[0]+B.x[0],A.x[1]+B.x[1],A.x[2]+B.x[2],A.x[3]+B.x[3],A.x[4]+B.x[4],A.x[5]+B.x[5],A.x[6]+B.x[6],A.x[7]+B.x[7],A.x[8]+B.x[8]);}
