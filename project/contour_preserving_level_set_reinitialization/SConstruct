@@ -1,0 +1,71 @@
+
+import os
+import sys
+
+include_paths = []
+compile_flags = []
+lib_paths = []
+libs = []
+linking_flags = []
+
+
+##
+## processor specific flags
+##
+
+compiler = 'g++'
+
+compile_flags.append('-march=native')
+
+# process command line arguments
+build_type = ARGUMENTS.get('type','release')
+if build_type == 'release':
+
+    build_dir = 'build/release'
+    compile_flags.append('-DNDEBUG')
+    compile_flags.append('-O3')
+
+elif build_type == 'debug':
+
+    build_dir = 'build/debug'
+    compile_flags.append('-g')
+    linking_flags.append('-g')
+    
+elif build_type == 'profile':
+
+    build_dir = 'build/profile'
+    compile_flags.append('-pg')
+    linking_flags.append('-pg')
+
+else:
+    print 'scons type=(release|debug|profile)'
+    sys.exit(1)
+
+openmp = ARGUMENTS.get('openmp','true')
+if openmp == 'true':
+    compile_flags.append('-fopenmp')
+    libs.append('gomp')
+
+
+include_paths.append('/usr/local/include')
+lib_paths.append('/usr/local/lib')
+
+libs.append('nlopt')
+libs.append('m')
+
+env = Environment(
+    CXX=compiler,
+    CPPFLAGS=compile_flags,
+    CPPPATH=include_paths,
+    LIBPATH=lib_paths,
+    LIBS=libs,
+    LINKFLAGS=linking_flags
+    )
+
+Export('env')
+
+env.SConscript('SConscript', build_dir=build_dir, duplicate=0)
+
+
+if os.path.exists('./test'+build_type) == False:
+    os.system('ln -s build/'+build_type+'/test test_'+build_type)
