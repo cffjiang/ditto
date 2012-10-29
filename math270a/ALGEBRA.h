@@ -498,6 +498,27 @@ public:
         delta_V=(helperV*(V.Transposed())).Transposed();
     }
 	
+    void Delta_RS(const MATRIX_2X2<T>& delta_F,MATRIX_2X2<T>& delta_R,MATRIX_2X2<T>& delta_S)const{
+        MATRIX_2X2<T> F=*this,U,V,R,S,Sigma;
+        VECTOR_2D<T> sigma;
+        F.SVD(U,sigma,V);
+        if(std::abs(sigma(0)+sigma(1))<1e-10) std::cout<<"FATAL ERROR: Weird case detected -- sigma(0)+signma(1)=0, R not differentiable.\n";
+
+        Sigma=MATRIX_2X2<T>(sigma(0),0,0,sigma(1));
+        R=U*(V.Transposed());
+        S=V*Sigma*(V.Transposed());
+
+        MATRIX_2X2<T> RtdF=R.Transposed()*delta_F;
+        T a=RtdF(0,0),b=RtdF(0,1),c=RtdF(1,0),d=RtdF(1,1),g=S(1,1),e=S(0,0),f=S(0,1);
+        T x=(b-c)/(g+e);
+        T y=a-x*f;
+        T z=d+x*f;
+        T w=b-x*g;
+
+        delta_R=MATRIX_2X2<T>(-x*R(0,1),-x*R(1,1),x*R(0,0),x*R(1,0));
+        delta_S=MATRIX_2X2<T>(y,w,w,z);
+    }
+
     static MATRIX_2X2<T> Givens_Rotation(const VECTOR_2D<T>& x,const T tol=(T)1e-10){
         //This returns the matrix G=[c,-s;s,c] such that Gx=[X;0]
         T denominator=x.Magnitude();
