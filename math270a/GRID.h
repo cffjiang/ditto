@@ -2,6 +2,7 @@
 #define _grids_
 
 #include <cassert>
+#include <fstream>
 #include "ALGEBRA.h"
 
 using namespace ALGEBRA;

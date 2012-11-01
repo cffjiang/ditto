@@ -8,7 +8,7 @@
 #include "float.h"
 #include <math.h>
 
-namespace MATH270A{
+namespace ALGEBRA{
 class INDEX_2D{
     /* This assumes that we have data at 0 <= i < n, 0 <=j< m. This then maps dofs at these coords to the integer 0 <= i*n+j < m*n
      */
@@ -918,6 +918,28 @@ public:
         MATRIX_3X3<T> dVtV(0,p,q,-p,0,r,-q,-r,0);
         delta_U=(dUtU*U.Transposed()).Transposed();
         delta_V=(dVtV*V.Transposed()).Transposed();
+    }
+
+    void Delta_RS(const MATRIX_3X3<T>& delta_F,MATRIX_3X3<T>& delta_R,MATRIX_3X3<T>& delta_S)const{
+        MATRIX_3X3<T> F=*this,U,V,R,S,Sigma;
+        VECTOR_3D<T> sigma;
+        F.SVD(U,sigma,V);
+        if(std::abs(sigma(0)+sigma(1))<1e-10||std::abs(sigma(1)+sigma(2))<1e-10||std::abs(sigma(0)+sigma(2))<1e-10) std::cout<<"FATAL ERROR: Weird case detected -- sigma(i)+signma(j)=0, R not differentiable.\n";
+
+        Sigma=MATRIX_3X3<T>(sigma(0),0,0,0,sigma(1),0,0,0,sigma(2));
+        R=U*(V.Transposed());
+        S=V*Sigma*(V.Transposed());
+
+        MATRIX_3X3<T> W=R.Transposed()*delta_F;
+        T trS=S(0,0)+S(1,1)+S(2,2);
+        MATRIX_3X3<T> SmtrS=S-trS*Identity();
+        SmtrS.Invert();
+        VECTOR_3D<T> ws(W(1,2)-W(2,1),W(2,0)-W(0,2),W(0,1)-W(1,0));
+        VECTOR_3D<T> r=SmtrS*ws;
+        T r1=r(0),r2=r(1),r3=r(2);
+        MATRIX_3X3<T> rMat(0,r3,-r2,-r3,0,r1,r2,-r1,0);
+        delta_R=R*rMat;
+        delta_S=W-rMat*S;
     }
 	
     void Invert(){

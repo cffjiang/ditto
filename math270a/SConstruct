@@ -41,7 +41,13 @@ if openmp == 'true':
     compile_flags.append('-fopenmp')
     libs.append('gomp')
 
-include_paths += '.'
+include_paths.append('.')
+
+include_paths.append('/usr/local/include')
+lib_paths.append('/usr/local/lib')
+libs.append('glut')
+libs.append('GL')
+libs.append('GLU')
 
 compile_flags.append('-Wno-deprecated')
 

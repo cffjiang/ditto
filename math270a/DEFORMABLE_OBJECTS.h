@@ -8,7 +8,8 @@
 #ifndef _deformable_object_
 #define _deformable_object_
 
-#include "../source/GEOMETRY.h"
+#include "GEOMETRY.h"
+#include "ALGEBRA.h"
 
 using namespace GEOMETRY;
 using namespace ALGEBRA;
